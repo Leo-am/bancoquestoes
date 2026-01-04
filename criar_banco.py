@@ -1,6 +1,6 @@
 import pdfplumber
 import sqlite3
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Dict, Any
 
 class Questao:
     """
@@ -241,4 +241,107 @@ def checar_questoes_inseridas(nome_do_banco: str, nome_da_tabela: str = 'questoe
     except sqlite3.Error as e:
         print(f"\n❌ Erro ao consultar o banco de dados: {e}")
         return []
+
+
+def deletar_questao_por_id(nome_do_banco: str, questao_id: int) -> bool:
+    """
+    Deleta uma entrada na tabela 'questoes' com base no seu ID.
+
+    Parameters
+    ----------
+    nome_do_banco : str
+        Nome do banco de dados (sem a extensão .db).
+    questao_id : int
+        O ID (chave primária) da questão a ser deletada.
+
+    Returns
+    -------
+    bool
+        True se a questão foi deletada com sucesso, False caso contrário.
+    """
+    db_file = f'{nome_do_banco}.db'
+    
+    try:
+        # 1. Conexão e Gerenciamento de Recurso
+        with sqlite3.connect(db_file) as conn:
+            cursor = conn.cursor()
+            
+            # 2. Instrução SQL de Deleção
+            # Usamos '?' para evitar ataques de injeção SQL, mesmo com um número inteiro
+            sql_delete = "DELETE FROM questoes WHERE id = ?" 
+            
+            # 3. Execução: passando a tupla (id,)
+            cursor.execute(sql_delete, (questao_id,))
+            
+            # 4. Confirmação da Transação
+            conn.commit()
+            
+            # Verifica quantas linhas foram afetadas para confirmar a deleção
+            if cursor.rowcount > 0:
+                print(f"✅ Questão com ID {questao_id} deletada com sucesso.")
+                return True
+            else:
+                print(f"⚠️ Nenhuma questão encontrada ou deletada com o ID {questao_id}.")
+                return False
+
+    except sqlite3.Error as e:
+        print(f"❌ Erro ao deletar a questão ID {questao_id} no banco de dados: {e}")
+        return False
+
+
+def editar_questao_por_id(nome_do_banco: str, questao_id: int, updates: Dict[str, Any]) -> bool:
+    """
+    Atualiza um ou mais campos de uma questão específica no banco de dados.
+
+    Parameters
+    ----------
+    nome_do_banco : str
+        Nome do banco de dados (sem a extensão .db).
+    questao_id : int
+        O ID da questão a ser atualizada.
+    updates : dict
+        Um dicionário onde a chave é o nome da coluna (ex: 'dificuldade')
+        e o valor é o novo dado (ex: 'Difícil').
+
+    Returns
+    -------
+    bool
+        True se a questão foi atualizada com sucesso, False caso contrário.
+    """
+    db_file = f'{nome_do_banco}.db'
+    
+    # 1. Preparação Dinâmica da Query SQL
+    # Ex: 'dificuldade = ?, origem = ?'
+    set_clauses = [f"{coluna} = ?" for coluna in updates.keys()]
+    set_clause_str = ", ".join(set_clauses)
+    
+    # Valores a serem atualizados (na mesma ordem das colunas)
+    update_values = list(updates.values())
+    
+    # A tupla final para a execução é: [valores dos updates] + [o ID da questão]
+    sql_parameters = update_values + [questao_id]
+    
+    # 2. Instrução SQL completa
+    sql_update = f"UPDATE questoes SET {set_clause_str} WHERE id = ?" 
+    
+    try:
+        with sqlite3.connect(db_file) as conn:
+            cursor = conn.cursor()
+            
+            # 3. Execução da Query
+            cursor.execute(sql_update, sql_parameters)
+            
+            conn.commit()
+            
+            # 4. Verificação
+            if cursor.rowcount > 0:
+                print(f"✅ Questão com ID {questao_id} atualizada com sucesso. Campos alterados: {list(updates.keys())}")
+                return True
+            else:
+                print(f"⚠️ Nenhuma questão encontrada ou alterada com o ID {questao_id}.")
+                return False
+
+    except sqlite3.Error as e:
+        print(f"❌ Erro ao editar a questão ID {questao_id} no banco de dados: {e}")
+        return False
 
