@@ -40,54 +40,55 @@ class Questao:
             temas_str
         )
 
-def extract_questions_from_pdf(pdf_path, delimiter):
+def extract_questions_from_pdf(pdf_path: str, delimiter: str) -> List[str]:
     """
-    Extrai questões de um arquivo PDF usando um delimitador específico.
+    Extrai questões de um arquivo PDF, tratando questões que abrangem múltiplas páginas.
+    
+    A correção: Concatena o texto de todas as páginas antes de aplicar o delimitador.
 
     Parameters
     ----------
     pdf_path : str
-        O caminho do arquivo PDF de onde as questões serão extraídas.
+        O caminho do arquivo PDF.
     delimiter : str
-        Delimitador utilizado para encontrar as questões.
+        Delimitador utilizado para encontrar as questões (ex: "Q.").
 
     Returns
     -------
     list of str
-        Uma lista contendo as questões extraídas, cada uma como uma
-        string.
-
-    Notes
-    -----
-    A função utiliza a biblioteca `pdfplumber` para abrir o PDF e
-    iterar por todas as suas páginas.
-    O texto de cada página é extraído e segmentado para identificar
-    questões com base em um delimitador.
-    Neste exemplo, "Q." é utilizado como delimitador para separar
-    as questões.
-
-    Example
-    -------
-    >>> questions = extract_questions_from_pdf("sample_questions.pdf")
-    >>> print(questions[0])
-    "Questão 1: Qual é a velocidade da luz no vácuo?"
-
-    Observações
-    -----------
-    - A função assume que cada questão é precedida pelo marcador "Q."
-    no PDF. Esse delimitador pode ser ajustado para outros padrões,
-    se necessário.
-    - A biblioteca `pdfplumber` precisa estar instalada para que a
-    função funcione corretamente.
+        Uma lista contendo as questões extraídas.
     """
-    questions = []
-    with pdfplumber.open(pdf_path) as pdf:
-        for page in pdf.pages:
-            text = page.extract_text()
-            # Identificar questões usando regex ou padrões específicos
-            # Exemplo básico de separação de questões por "Q."
-            questions.extend(text.split(f"{delimiter}")[1:]) 
-    return questions
+    full_text = []
+    
+    try:
+        # 1. Extração e Concatenação de Todo o Texto do Documento
+        with pdfplumber.open(pdf_path) as pdf:
+            for page in pdf.pages:
+                # Adiciona o texto de cada página à lista, garantindo um espaço ou quebra
+                # de linha para evitar que palavras de páginas diferentes se juntem
+                full_text.append(page.extract_text())
+                
+        # Concatena todo o texto em um único bloco grande
+        document_text = "\n".join(full_text)
+        
+        # 2. Aplicação do Delimitador ao Documento Inteiro
+        # Faz o split do texto usando o delimitador, garantindo que mesmo
+        # questões que cruzam páginas sejam separadas corretamente.
+        
+        # [1:] é usado para ignorar o texto antes do primeiro delimitador
+        questions = document_text.split(delimiter)[1:]
+        
+        # Opcional: Limpar espaços em branco e quebras de linha no início de cada questão
+        questions = [q.strip() for q in questions]
+
+        return questions
+        
+    except FileNotFoundError:
+        print(f"❌ Erro: Arquivo '{pdf_path}' não encontrado.")
+        return []
+    except Exception as e:
+        print(f"❌ Ocorreu um erro durante a extração do PDF: {e}")
+        return []
 
 
 
@@ -344,4 +345,7 @@ def editar_questao_por_id(nome_do_banco: str, questao_id: int, updates: Dict[str
     except sqlite3.Error as e:
         print(f"❌ Erro ao editar a questão ID {questao_id} no banco de dados: {e}")
         return False
+
+
+
 
