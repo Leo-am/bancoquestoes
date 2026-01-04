@@ -1,7 +1,8 @@
 import sqlite3
 from fpdf import FPDF
-from reportlab.lib.pagesizes import letter
-from reportlab.pdfgen import canvas
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
 
 
 
@@ -80,9 +81,15 @@ def fetch_questions(nome='banco_questoes.db', tema=None,
 
 
 
+from reportlab.lib.pagesizes import A4
+from reportlab.lib import colors
+from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
+
 def create_pdf(questions, output_pdf_path):
     """
-    Generates a PDF with a list of questions, supporting Unicode characters.
+    Generates a PDF with a list of questions, including the label 'Questão' 
+    before each question and a space between the title and question text.
 
     Parameters
     ----------
@@ -91,28 +98,30 @@ def create_pdf(questions, output_pdf_path):
     output_pdf_path : str
         Path where the output PDF file will be saved.
     """
-    c = canvas.Canvas(output_pdf_path, pagesize=letter)
-    width, height = letter
-    c.setFont("Helvetica", 12)
-    y = height - 40  # Start from the top of the page
+    # Configure the PDF document with A4 page size
+    doc = SimpleDocTemplate(output_pdf_path, pagesize=A4)
+    styles = getSampleStyleSheet()
+    
+    # Define a style for the "Questão" title
+    title_style = ParagraphStyle(name="Title", fontSize=12, leading=14, spaceAfter=6)
+    question_style = styles["BodyText"]  # Use a standard text style for the question text
+
+    # Collect elements to add to the PDF
+    elements = []
 
     for idx, question in enumerate(questions, 1):
-        lines = question[1].split("\n")
-        # Draw the question number before the lines
-        c.drawString(40, y, f"Q{idx}. {lines[0]}")
-        y -= 20  # Move down for the next line
+        # Add the title "Questão {n}" as a paragraph
+        title_text = f"<b>Questão {idx}</b>"
+        title_paragraph = Paragraph(title_text, title_style)
+        elements.append(title_paragraph)
         
-        # Draw the remaining lines of the question
-        for line in lines[1:]:
-            c.drawString(40, y, line)
-            y -= 20  # Move down for the next line
+        # Add the question text with automatic line breaks
+        question_text = question[1]
+        question_paragraph = Paragraph(question_text, question_style)
+        elements.append(question_paragraph)
 
-        y -= 10  # Extra space between questions
+        # Add space after each question
+        elements.append(Spacer(1, 12))  
 
-        # Check if we are nearing the bottom of the page
-        if y < 40:
-            c.showPage()  # Start a new page
-            c.setFont("Helvetica", 12)
-            y = height - 40  # Reset Y position
-
-    c.save()
+    # Build the PDF
+    doc.build(elements)
