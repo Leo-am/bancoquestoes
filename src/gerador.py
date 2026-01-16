@@ -1,6 +1,9 @@
 import sqlite3
 from typing import Dict, List
 
+"""Módulo que contém todas as funções/classes para criar
+a lista de questões a partir do banco de dados."""
+
 
 def buscar_questoes_por_tema(nome_do_banco: str, tema_alvo: str) -> List[Dict]:
     """

@@ -1,10 +1,12 @@
-import csv
 import re
 import sqlite3
 from typing import Any, Dict, List, Optional, Tuple
 
 import pandas as pd
 import pdfplumber
+
+"""Módulo que contém todas as funções/classes para criar
+o banco de dados de questões."""
 
 
 class Questao:
@@ -209,7 +211,8 @@ def insert_question(banco: str, questao: Questao) -> None:
         with sqlite3.connect(f"{banco}.db") as conn:
             cursor = conn.cursor()
 
-            # A ordem dos campos aqui DEVE CORRESPONDER à ordem da tupla gerada por questao.to_tuple()
+            # A ordem dos campos aqui DEVE CORRESPONDER à ordem da tupla gerada
+            # por questao.to_tuple()
             query = """
             INSERT INTO questoes 
             (texto, serie, origem, dificuldade, imagem, temas) 
@@ -443,7 +446,8 @@ def popular_banco_com_classificacao(
         # Carrega o CSV usando Pandas para fácil manipulação
         df = pd.read_csv(csv_path)
 
-        # O cabeçalho deve ser: número_questao, serie, origem, dificuldade, imagem, tema1, tema2, tema3
+        # O cabeçalho deve ser: 
+        # número_questao, serie, origem, dificuldade, imagem, tema1, tema2, tema3
 
         # Cria um dicionário de metadados, usando o número da questão como chave
         # Isso permite o mapeamento rápido com o índice do PDF
@@ -456,7 +460,8 @@ def popular_banco_com_classificacao(
                 num_questao = int(row["numero_questao"])
             except ValueError:
                 print(
-                    f"⚠️ Aviso: 'numero_questao' inválido na linha {index + 2} do CSV. Ignorando linha."
+                    f"⚠️ Aviso: 'numero_questao' inválido na linha {index + 2} do CSV."
+                    f"Ignorando linha."
                 )
                 continue
 
@@ -504,7 +509,8 @@ def popular_banco_com_classificacao(
     for i, texto_questao in enumerate(textos_questoes):
         num_questao = i + 1  # Questão 1, 2, 3...
 
-        # Pula a inserção se o metadado não existir para esta questão (ex: se o CSV for menor que o PDF)
+        # Pula a inserção se o metadado não existir para esta questão 
+        # (ex: se o CSV for menor que o PDF)
         if num_questao not in metadata_map:
             print(
                 f"⚠️ Aviso: Questão {num_questao} do PDF não tem metadados no CSV. Pulando."
