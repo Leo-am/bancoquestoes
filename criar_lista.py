@@ -1,127 +1,100 @@
 import sqlite3
-from fpdf import FPDF
-from reportlab.lib.pagesizes import A4
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
+from typing import List, Dict
 
-
-
-def fetch_questions(nome='banco_questoes.db', tema=None,
-                    dificuldade=None, serie=None):
+def buscar_questoes_por_tema(nome_do_banco: str, tema_alvo: str) -> List[Dict]:
     """
-    Busca questões no banco de dados 'banco_questoes.db' com base nos critérios fornecidos.
-
-    Parameters
-    ----------
-    name : str
-        String com o nome do banco de dados.
-    tema : str, optional
-        O tema ou assunto da questão para filtrar os resultados.
-    dificuldade : str, optional
-        O nível de dificuldade da questão para filtrar os resultados.
-    serie : str, optional
-        A série ou nível de ensino da questão para filtrar os resultados.
-
-    Returns
-    -------
-    list of tuples
-        Uma lista contendo as questões que correspondem aos critérios de pesquisa. 
-        Cada item é uma tupla representando uma questão.
-
-    Notes
-    -----
-    - Se nenhum parâmetro for fornecido, a função retornará todas as questões.
-    - Cada questão retornada contém as colunas da tabela: ID, texto, tema, dificuldade e série.
-
-    Example
-    -------
-    >>> fetch_questions(tema="Física", dificuldade="Fácil", serie="1º ano")
-    Retorna todas as questões de Física, com dificuldade "Fácil" para o "1º ano".
+    Busca questões onde o campo 'temas' contém o tema alvo, retornando uma lista de dicionários.
     """
-    conn = sqlite3.connect(f'{nome}.db')
-    cursor = conn.cursor()
-    query = "SELECT * FROM questoes WHERE 1=1"
-    if tema:
-        query += f" AND tema='{tema}'"
-    if dificuldade:
-        query += f" AND dificuldade='{dificuldade}'"
-    if serie:
-        query += f" AND serie='{serie}'"
-    cursor.execute(query)
-    results = cursor.fetchall()
-    conn.close()
-    return results
-
-
-
-# def create_pdf(questions, output_pdf_path):
-#     """
-#     Generates a PDF with a list of questions, supporting Unicode characters.
-
-#     Parameters
-#     ----------
-#     questions : list of tuples
-#         A list of questions, where each question is a tuple.
-#     output_pdf_path : str
-#         Path where the output PDF file will be saved.
-
-#     """
-#     pdf = FPDF()
-#     pdf.set_auto_page_break(auto=True, margin=15)
-#     pdf.add_page()
-
-#     # Use a standard font that supports Unicode in fpdf2
-#     pdf.set_font("Arial", size=12)
-
-#     for idx, question in enumerate(questions, 1):
-#         pdf.multi_cell(0, 10, f"Q{idx}. {question[1]}")
-#         pdf.ln()
-
-#     pdf.output(output_pdf_path)
-
-
-
-from reportlab.lib.pagesizes import A4
-from reportlab.lib import colors
-from reportlab.lib.styles import getSampleStyleSheet
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
-
-def create_pdf(questions, output_pdf_path):
-    """
-    Generates a PDF with a list of questions, including the label 'Questão' 
-    before each question and a space between the title and question text.
-
-    Parameters
-    ----------
-    questions : list of tuples
-        A list of questions, where each question is a tuple.
-    output_pdf_path : str
-        Path where the output PDF file will be saved.
-    """
-    # Configure the PDF document with A4 page size
-    doc = SimpleDocTemplate(output_pdf_path, pagesize=A4)
-    styles = getSampleStyleSheet()
+    db_file = f'{nome_do_banco}.db'
     
-    # Define a style for the "Questão" title
-    title_style = ParagraphStyle(name="Title", fontSize=12, leading=14, spaceAfter=6)
-    question_style = styles["BodyText"]  # Use a standard text style for the question text
+    try:
+        with sqlite3.connect(db_file) as conn:
+            conn.row_factory = sqlite3.Row  # Retorna resultados como dicionários
+            cursor = conn.cursor()
+            
+            # O operador LIKE com % garante que a busca encontre a string em qualquer parte do campo.
+            # Ex: Busca "Calorimetria" dentro de "Física, Termodinâmica, Calorimetria"
+            sql_query = "SELECT * FROM questoes WHERE temas LIKE ?"
+            
+            # O padrão de busca com curingas (%)
+            search_pattern = f"%{tema_alvo}%"
+            
+            cursor.execute(sql_query, (search_pattern,))
+            
+            registros = [dict(row) for row in cursor.fetchall()]
+            return registros
+                
+    except sqlite3.Error as e:
+        print(f"❌ Erro ao buscar questões por tema: {e}")
+        return []
 
-    # Collect elements to add to the PDF
-    elements = []
+def gerar_lista_exercicios_latex(nome_do_banco: str, tema: str, nome_arquivo: str):
+    """
+    Gera um arquivo .tex contendo uma lista de exercícios sobre o tema especificado.
+    """
+    # 1. Obter as questões
+    questoes = buscar_questoes_por_tema(nome_do_banco, tema)
+    
+    if not questoes:
+        print(f"⚠️ Nenhuma questão encontrada para o tema '{tema}'. Arquivo LaTeX não gerado.")
+        return
 
-    for idx, question in enumerate(questions, 1):
-        # Add the title "Questão {n}" as a paragraph
-        title_text = f"<b>Questão {idx}</b>"
-        title_paragraph = Paragraph(title_text, title_style)
-        elements.append(title_paragraph)
+    # 2. Montar o conteúdo LaTeX
+    conteudo_latex = []
+    
+    # 2.1. Cabeçalho do Documento
+    conteudo_latex.append(r"\documentclass{article}")
+    conteudo_latex.append(r"\usepackage[utf8]{inputenc}")
+    conteudo_latex.append(r"\usepackage{amsmath}") # Útil para fórmulas
+    conteudo_latex.append(r"\usepackage{graphicx}") # Para incluir imagens (se houver)
+    conteudo_latex.append(r"\geometry{margin=1in}") # Margens ajustadas
+    conteudo_latex.append(r"\title{Lista de Exercícios - " + tema + "}")
+    conteudo_latex.append(r"\author{Banco de Questões}")
+    conteudo_latex.append(r"\date{\today}")
+    conteudo_latex.append(r"\begin{document}")
+    conteudo_latex.append(r"\maketitle")
+    
+    conteudo_latex.append(r"\section*{Questões de " + tema + r"}")
+    conteudo_latex.append(r"\begin{enumerate}")
+    
+    # 2.2. Adicionar as Questões
+    for q in questoes:
+        # \item inicia um novo item na lista enumerada (nova questão)
+        conteudo_latex.append(r"\item")
         
-        # Add the question text with automatic line breaks
-        question_text = question[1]
-        question_paragraph = Paragraph(question_text, question_style)
-        elements.append(question_paragraph)
+        # O texto da questão pode ter caracteres especiais do LaTeX (como %, $, _).
+        # É crucial escapá-los ou usar um pacote como 'verbatim' para texto cru.
+        # Aqui, vamos fazer uma substituição simples e crucial:
+        texto_limpo = q['texto'].replace('\\', r'\textbackslash{}') # Escapa barras invertidas
+        texto_limpo = texto_limpo.replace('&', r'\&')
+        texto_limpo = texto_limpo.replace('%', r'\%')
+        texto_limpo = texto_limpo.replace('_', r'\_')
+        texto_limpo = texto_limpo.replace('$', r'\$') # Se houver $, o LaTeX espera modo matemático
+        
+        conteudo_latex.append(texto_limpo)
+        
+        # 2.3. Adicionar Imagem (se existir)
+        if q['imagem'] and q['imagem'] != 'None':
+            # Nota: O LaTeX precisará da imagem no mesmo diretório ou em um caminho conhecido.
+            conteudo_latex.append(r"\begin{figure}[h]")
+            conteudo_latex.append(r"    \centering")
+            # Ajuste o caminho da imagem e a largura conforme necessário
+            conteudo_latex.append(r"    \includegraphics[width=0.8\textwidth]{" + q['imagem'] + r"}")
+            conteudo_latex.append(r"    \caption{Imagem auxiliar da Questão ID " + str(q['id']) + r"}")
+            conteudo_latex.append(r"\end{figure}")
+            
+        conteudo_latex.append(r"") # Linha vazia para separação
 
-        # Add space after each question
-        elements.append(Spacer(1, 12))  
-
-    # Build the PDF
-    doc.build(elements)
+    # 2.4. Rodapé do Documento
+    conteudo_latex.append(r"\end{enumerate}")
+    conteudo_latex.append(r"\end{document}")
+    
+    # 3. Geração do Arquivo
+    conteudo_final = "\n".join(conteudo_latex)
+    
+    with open(f"{nome_arquivo}.tex", "w", encoding="utf-8") as f:
+        f.write(conteudo_final)
+        
+    print(f"\n✅ Arquivo LaTeX '{nome_arquivo}.tex' gerado com sucesso!")
+    print(f"Total de {len(questoes)} questões de '{tema}' incluídas.")
+    print("Para gerar o PDF, execute no terminal: pdflatex " + nome_arquivo + ".tex")

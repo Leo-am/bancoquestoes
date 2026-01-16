@@ -1,7 +1,10 @@
 import pdfplumber
 import re
 import sqlite3
+import pandas as pd
+import csv
 from typing import List, Optional, Tuple, Dict, Any
+from typing import List, Dict, Any, Optional
 
 class Questao:
     """
@@ -40,58 +43,6 @@ class Questao:
             self.imagem_path,
             temas_str
         )
-
-def extract_questions_from_pdf(pdf_path: str, delimiter: str) -> List[str]:
-    """
-    Extrai questões de um arquivo PDF, tratando questões que abrangem múltiplas páginas.
-    
-    A correção: Concatena o texto de todas as páginas antes de aplicar o delimitador.
-
-    Parameters
-    ----------
-    pdf_path : str
-        O caminho do arquivo PDF.
-    delimiter : str
-        Delimitador utilizado para encontrar as questões (ex: "Q.").
-
-    Returns
-    -------
-    list of str
-        Uma lista contendo as questões extraídas.
-    """
-    full_text = []
-    
-    try:
-        # 1. Extração e Concatenação de Todo o Texto do Documento
-        with pdfplumber.open(pdf_path) as pdf:
-            for page in pdf.pages:
-                # Adiciona o texto de cada página à lista, garantindo um espaço ou quebra
-                # de linha para evitar que palavras de páginas diferentes se juntem
-                full_text.append(page.extract_text())
-                
-        # Concatena todo o texto em um único bloco grande
-        document_text = "\n".join(full_text)
-        
-        # 2. Aplicação do Delimitador ao Documento Inteiro
-        # Faz o split do texto usando o delimitador, garantindo que mesmo
-        # questões que cruzam páginas sejam separadas corretamente.
-        
-        # [1:] é usado para ignorar o texto antes do primeiro delimitador
-        questions = document_text.split(delimiter)[1:]
-        
-        # Opcional: Limpar espaços em branco e quebras de linha no início de cada questão
-        questions = [q.strip() for q in questions]
-
-        return questions
-        
-    except FileNotFoundError:
-        print(f"❌ Erro: Arquivo '{pdf_path}' não encontrado.")
-        return []
-    except Exception as e:
-        print(f"❌ Ocorreu um erro durante a extração do PDF: {e}")
-        return []
-
-
 
 def create_database(nome: str) -> None:
     """
@@ -132,6 +83,104 @@ def create_database(nome: str) -> None:
             
     except sqlite3.Error as e:
         print(f"Erro ao criar o banco de dados/tabela '{db_file}': {e}")
+
+def extract_questions_from_pdf(pdf_path: str, delimiter: str) -> List[str]:
+    """
+    Extrai questões de um arquivo PDF qualquer.
+    Extrai corretamente questões que abrangem múltiplas páginas.
+
+    Parameters
+    ----------
+    pdf_path : str
+        O caminho do arquivo PDF.
+    delimiter : str
+        Delimitador utilizado para encontrar as questões (ex: "Questão").
+
+    Returns
+    -------
+    list of str
+        Uma lista contendo as questões extraídas.
+    """
+    full_text = []
+    
+    try:
+        # 1. Extração e Concatenação de Todo o Texto do Documento
+        with pdfplumber.open(pdf_path) as pdf:
+            for page in pdf.pages:
+                # Adiciona o texto de cada página à lista, garantindo um espaço ou quebra
+                # de linha para evitar que palavras de páginas diferentes se juntem
+                full_text.append(page.extract_text())
+                
+        # Concatena todo o texto em um único bloco grande
+        document_text = "\n".join(full_text)
+        
+        # 2. Aplicação do Delimitador ao Documento Inteiro
+        # Faz o split do texto usando o delimitador, garantindo que mesmo
+        # questões que cruzam páginas sejam separadas corretamente.
+        
+        # [1:] é usado para ignorar o texto antes do primeiro delimitador
+        questions = document_text.split(delimiter)[1:]
+        
+        # Opcional: Limpar espaços em branco e quebras de linha no início de cada questão
+        questions = [q.strip() for q in questions]
+
+        return questions
+        
+    except FileNotFoundError:
+        print(f"❌ Erro: Arquivo '{pdf_path}' não encontrado.")
+        return []
+    except Exception as e:
+        print(f"❌ Ocorreu um erro durante a extração do PDF: {e}")
+        return []
+
+
+def extract_questions_from_OBFEP(pdf_path: str, base_char: str = "B") -> List[str]:
+    """
+    Extrai questões de uma prova da OBFEP utilizando um padrão incremental customizável.
+    
+    Exemplo: 
+    
+    Se base_char='A', procura 'A.1)', 'A.2)', etc.
+    """
+    full_text = []
+    
+    try:
+        # 1. Extração de todo o texto do PDF
+        with pdfplumber.open(pdf_path) as pdf:
+            for page in pdf.pages:
+                page_text = page.extract_text()
+                if page_text:
+                    full_text.append(page_text)
+        
+        document_text = "\n".join(full_text)
+        
+        # 2. Construção do Padrão Regex Dinâmico
+        # f"{base_char}" -> Letra escolhida seguida de ponto
+        # \d+             -> Um ou mais dígitos
+        # \)              -> Parênteses de fechamento
+        regex_pattern = rf"{re.escape(base_char)}\d+\)"
+        
+        # 3. Divisão do texto
+        # Usamos o padrão dinâmico para o split
+        questions = re.split(regex_pattern, document_text)
+        
+        # 4. Limpeza e Filtro
+        # Ignora o cabeçalho antes da primeira questão [1:]
+        questions = [q.strip() for q in questions[1:] if q.strip()]
+
+        print(f"✅ Extração com delimitador '{base_char}.X)' concluída: {len(questions)} questões.")
+        return questions
+        
+    except FileNotFoundError:
+        print(f"❌ Erro: Arquivo '{pdf_path}' não encontrado.")
+        return []
+    except Exception as e:
+        print(f"❌ Erro na extração: {e}")
+        return []
+
+
+
+
 
 
 def insert_question(banco: str, questao: Questao) -> None:
@@ -348,47 +397,147 @@ def editar_questao_por_id(nome_do_banco: str, questao_id: int, updates: Dict[str
         return False
 
 
-def extract_questions_from_OBFEP(pdf_path: str, base_char: str = "B") -> List[str]:
+def popular_banco_com_classificacao(
+    banco_nome: str,
+    pdf_path: str,
+    csv_path: str,
+    pdf_delimiter: str = "Q."
+) -> None:
     """
-    Extrai questões de um PDF utilizando um padrão incremental customizável.
-    Exemplo: Se base_char='A', procura 'A. 1)', 'A. 2)', etc.
+    Lê questões de um PDF e metadados de um CSV, mapeia os dados
+    e insere as questões classificadas no banco de dados.
+
+    Parameters
+    ----------
+    banco_nome : str
+        Nome do banco de dados (ex: 'meu_banco_questoes').
+    pdf_path : str
+        Caminho para o arquivo PDF contendo os textos das questões.
+    csv_path : str
+        Caminho para o arquivo CSV contendo os metadados de classificação.
+    pdf_delimiter : str
+        Delimitador usado no PDF para iniciar uma nova questão (ex: "Q.").
+    
+    Returns
+    -------
+    None
     """
-    full_text = []
+    
+    print("--- INICIANDO FLUXO DE MAPEAMENTO E INSERÇÃO (CSV + PDF) ---")
+    
+    # --- 1. Leitura e Preparação dos Metadados (CSV) ---
+    try:
+        # Carrega o CSV usando Pandas para fácil manipulação
+        df = pd.read_csv(csv_path)
+        
+        # O cabeçalho deve ser: número_questao, serie, origem, dificuldade, imagem, tema1, tema2, tema3
+        
+        # Cria um dicionário de metadados, usando o número da questão como chave
+        # Isso permite o mapeamento rápido com o índice do PDF
+        metadata_map: Dict[int, Dict[str, Any]] = {}
+        
+        for index, row in df.iterrows():
+            # A chave de mapeamento deve ser o número da questão
+            try:
+                # O número da questão no CSV (que deve ser 1, 2, 3...)
+                num_questao = int(row['numero_questao']) 
+            except ValueError:
+                print(f"⚠️ Aviso: 'numero_questao' inválido na linha {index + 2} do CSV. Ignorando linha.")
+                continue
+
+            # Constrói a lista de temas (ignorando células vazias/NaN)
+            temas = [
+                str(t) for t in [row['tema1'], row['tema2'], row['tema3']] 
+                if pd.notna(t) and str(t).strip() and str(t).lower() != 'none'
+            ]
+            
+            # Armazena os metadados
+            metadata_map[num_questao] = {
+                'serie': row.get('serie'),
+                'origem': row.get('origem'),
+                'dificuldade': row.get('dificuldade'),
+                'imagem_path': row.get('imagem'),
+                'temas': temas
+            }
+        
+        print(f"✅ CSV Lido: {len(metadata_map)} metadados prontos para mapeamento.")
+
+    except FileNotFoundError:
+        print(f"❌ Erro: Arquivo CSV '{csv_path}' não encontrado.")
+        return
+    except KeyError as e:
+        print(f"❌ Erro de coluna: Verifique se o CSV tem o cabeçalho correto, faltando a coluna {e}.")
+        return
+
+    # --- 2. Leitura dos Textos das Questões (PDF) ---
+    textos_questoes: List[str] = extract_questions_from_OBFEP(pdf_path, pdf_delimiter)
+    
+    if not textos_questoes:
+        print(f"❌ Erro: Não foi possível extrair questões do PDF '{pdf_path}'.")
+        return
+    
+    print(f"✅ PDF Lido: {len(textos_questoes)} textos de questões extraídos.")
+
+    # --- 3. Mapeamento, Criação de Objeto e Inserção no Banco ---
+    
+    total_inserido = 0
+    
+    # Iteração sobre a lista de textos. O índice (i) + 1 é o número da questão.
+    for i, texto_questao in enumerate(textos_questoes):
+        num_questao = i + 1 # Questão 1, 2, 3...
+        
+        # Pula a inserção se o metadado não existir para esta questão (ex: se o CSV for menor que o PDF)
+        if num_questao not in metadata_map:
+            print(f"⚠️ Aviso: Questão {num_questao} do PDF não tem metadados no CSV. Pulando.")
+            continue
+            
+        metadata = metadata_map[num_questao]
+        
+        try:
+            # Criação do objeto Questao com os dados completos
+            nova_questao = Questao(
+                texto=texto_questao.strip(), # Limpa o texto
+                serie=metadata.get('serie', 'N/A'),
+                origem=metadata.get('origem', 'PDF'),
+                dificuldade=metadata.get('dificuldade', 'N/A'),
+                imagem_path=metadata.get('imagem_path'),
+                temas=metadata.get('temas')
+            )
+            
+            # 4. Inserção no banco de dados
+            insert_question(banco_nome, nova_questao)
+            total_inserido += 1
+            
+        except Exception as e:
+            print(f"❌ Erro ao processar/inserir Questão {num_questao}: {e}")
+            
+    print(f"\n--- FLUXO CONCLUÍDO. Total de {total_inserido} questões inseridas/atualizadas. ---")
+
+
+
+def buscar_questao_por_id(nome_do_banco: str, questao_id: int) -> Optional[Dict]:
+    """
+    Busca uma questão no banco de dados pelo seu ID e retorna os dados como um dicionário.
+    """
+    db_file = f'{nome_do_banco}.db'
     
     try:
-        # 1. Extração de todo o texto do PDF
-        with pdfplumber.open(pdf_path) as pdf:
-            for page in pdf.pages:
-                page_text = page.extract_text()
-                if page_text:
-                    full_text.append(page_text)
-        
-        document_text = "\n".join(full_text)
-        
-        # 2. Construção do Padrão Regex Dinâmico
-        # f"{base_char}\." -> Letra escolhida seguida de ponto
-        # \s?             -> Espaço opcional
-        # \d+             -> Um ou mais dígitos
-        # \)              -> Parênteses de fechamento
-        regex_pattern = rf"{re.escape(base_char)}\d+\)"
-        
-        # 3. Divisão do texto
-        # Usamos o padrão dinâmico para o split
-        questions = re.split(regex_pattern, document_text)
-        
-        # 4. Limpeza e Filtro
-        # Ignora o cabeçalho antes da primeira questão [1:]
-        questions = [q.strip() for q in questions[1:] if q.strip()]
-
-        print(f"✅ Extração com delimitador '{base_char}.X)' concluída: {len(questions)} questões.")
-        return questions
-        
-    except FileNotFoundError:
-        print(f"❌ Erro: Arquivo '{pdf_path}' não encontrado.")
-        return []
-    except Exception as e:
-        print(f"❌ Erro na extração: {e}")
-        return []
-
-
-
+        with sqlite3.connect(db_file) as conn:
+            # Garante que as linhas sejam retornadas como objetos acessíveis por nome da coluna
+            conn.row_factory = sqlite3.Row  
+            cursor = conn.cursor()
+            
+            # Seleciona todos os campos
+            cursor.execute("SELECT * FROM questoes WHERE id = ?", (questao_id,))
+            
+            registro = cursor.fetchone()
+            
+            if registro:
+                # Converte o objeto Row para um dicionário padrão
+                return dict(registro) 
+            else:
+                return None
+                
+    except sqlite3.Error as e:
+        print(f"❌ Erro ao buscar questão no banco de dados: {e}")
+        return None
