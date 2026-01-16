@@ -1,16 +1,18 @@
-import pdfplumber
+import csv
 import re
 import sqlite3
+from typing import Any, Dict, List, Optional, Tuple
+
 import pandas as pd
-import csv
-from typing import List, Optional, Tuple, Dict, Any
-from typing import List, Dict, Any, Optional
+import pdfplumber
+
 
 class Questao:
     """
     Representa uma única questão com todos os seus atributos,
     garantindo que os dados sejam agrupados de forma consistente.
     """
+
     def __init__(
         self,
         texto: str,
@@ -18,7 +20,7 @@ class Questao:
         origem: str,
         dificuldade: str,
         imagem_path: Optional[str] = None,
-        temas: Optional[List[str]] = None
+        temas: Optional[List[str]] = None,
     ):
         self.texto = texto
         self.serie = serie
@@ -26,7 +28,7 @@ class Questao:
         self.dificuldade = dificuldade
         self.imagem_path = imagem_path
         self.temas = temas if temas is not None else []
-    
+
     def to_tuple(self) -> tuple:
         """
         Converte os dados da questão em uma tupla na ordem esperada pelo SQLite
@@ -34,15 +36,16 @@ class Questao:
         """
         # Converte a lista de temas em uma string separada por vírgulas
         temas_str = ", ".join(self.temas)
-        
+
         return (
             self.texto,
             self.serie,
             self.origem,
             self.dificuldade,
             self.imagem_path,
-            temas_str
+            temas_str,
         )
+
 
 def create_database(nome: str) -> None:
     """
@@ -59,14 +62,15 @@ def create_database(nome: str) -> None:
     -------
     None
     """
-    db_file = f'{nome}.db'
-    
+    db_file = f"{nome}.db"
+
     try:
         # Uso do 'with' para garantir que a conexão seja fechada automaticamente
         with sqlite3.connect(db_file) as conn:
             cursor = conn.cursor()
             cursor.execute("PRAGMA encoding = 'UTF-8';")
-            cursor.execute('''
+            cursor.execute(
+                """
                 CREATE TABLE IF NOT EXISTS questoes (
                     id INTEGER PRIMARY KEY,
                     
@@ -77,12 +81,16 @@ def create_database(nome: str) -> None:
                     imagem TEXT,             
                     temas TEXT               
                 )
-            ''')
-            
-            print(f"Banco de dados '{db_file}' e tabela 'questoes' criados/verificados.")
-            
+            """
+            )
+
+            print(
+                f"Banco de dados '{db_file}' e tabela 'questoes' criados/verificados."
+            )
+
     except sqlite3.Error as e:
         print(f"Erro ao criar o banco de dados/tabela '{db_file}': {e}")
+
 
 def extract_questions_from_pdf(pdf_path: str, delimiter: str) -> List[str]:
     """
@@ -102,7 +110,7 @@ def extract_questions_from_pdf(pdf_path: str, delimiter: str) -> List[str]:
         Uma lista contendo as questões extraídas.
     """
     full_text = []
-    
+
     try:
         # 1. Extração e Concatenação de Todo o Texto do Documento
         with pdfplumber.open(pdf_path) as pdf:
@@ -110,22 +118,22 @@ def extract_questions_from_pdf(pdf_path: str, delimiter: str) -> List[str]:
                 # Adiciona o texto de cada página à lista, garantindo um espaço ou quebra
                 # de linha para evitar que palavras de páginas diferentes se juntem
                 full_text.append(page.extract_text())
-                
+
         # Concatena todo o texto em um único bloco grande
         document_text = "\n".join(full_text)
-        
+
         # 2. Aplicação do Delimitador ao Documento Inteiro
         # Faz o split do texto usando o delimitador, garantindo que mesmo
         # questões que cruzam páginas sejam separadas corretamente.
-        
+
         # [1:] é usado para ignorar o texto antes do primeiro delimitador
         questions = document_text.split(delimiter)[1:]
-        
+
         # Opcional: Limpar espaços em branco e quebras de linha no início de cada questão
         questions = [q.strip() for q in questions]
 
         return questions
-        
+
     except FileNotFoundError:
         print(f"❌ Erro: Arquivo '{pdf_path}' não encontrado.")
         return []
@@ -137,13 +145,13 @@ def extract_questions_from_pdf(pdf_path: str, delimiter: str) -> List[str]:
 def extract_questions_from_OBFEP(pdf_path: str, base_char: str = "B") -> List[str]:
     """
     Extrai questões de uma prova da OBFEP utilizando um padrão incremental customizável.
-    
-    Exemplo: 
-    
+
+    Exemplo:
+
     Se base_char='A', procura 'A.1)', 'A.2)', etc.
     """
     full_text = []
-    
+
     try:
         # 1. Extração de todo o texto do PDF
         with pdfplumber.open(pdf_path) as pdf:
@@ -151,36 +159,34 @@ def extract_questions_from_OBFEP(pdf_path: str, base_char: str = "B") -> List[st
                 page_text = page.extract_text()
                 if page_text:
                     full_text.append(page_text)
-        
+
         document_text = "\n".join(full_text)
-        
+
         # 2. Construção do Padrão Regex Dinâmico
         # f"{base_char}" -> Letra escolhida seguida de ponto
         # \d+             -> Um ou mais dígitos
         # \)              -> Parênteses de fechamento
         regex_pattern = rf"{re.escape(base_char)}\d+\)"
-        
+
         # 3. Divisão do texto
         # Usamos o padrão dinâmico para o split
         questions = re.split(regex_pattern, document_text)
-        
+
         # 4. Limpeza e Filtro
         # Ignora o cabeçalho antes da primeira questão [1:]
         questions = [q.strip() for q in questions[1:] if q.strip()]
 
-        print(f"✅ Extração com delimitador '{base_char}.X)' concluída: {len(questions)} questões.")
+        print(
+            f"✅ Extração com delimitador '{base_char}.X)' concluída: {len(questions)} questões."
+        )
         return questions
-        
+
     except FileNotFoundError:
         print(f"❌ Erro: Arquivo '{pdf_path}' não encontrado.")
         return []
     except Exception as e:
         print(f"❌ Erro na extração: {e}")
         return []
-
-
-
-
 
 
 def insert_question(banco: str, questao: Questao) -> None:
@@ -194,32 +200,34 @@ def insert_question(banco: str, questao: Questao) -> None:
         Nome do banco de dados (ex: 'meu_banco'). O arquivo será '{banco}.db'.
     questao : Questao
         Objeto da classe Questao contendo todos os dados a serem inseridos.
-    
+
     Returns
     -------
     None
     """
     try:
-        with sqlite3.connect(f'{banco}.db') as conn:
+        with sqlite3.connect(f"{banco}.db") as conn:
             cursor = conn.cursor()
-            
+
             # A ordem dos campos aqui DEVE CORRESPONDER à ordem da tupla gerada por questao.to_tuple()
             query = """
             INSERT INTO questoes 
             (texto, serie, origem, dificuldade, imagem, temas) 
             VALUES (?, ?, ?, ?, ?, ?)
             """
-            
+
             # Utiliza o método to_tuple() da classe Questao para obter os valores na ordem correta
             cursor.execute(query, questao.to_tuple())
-            
+
             conn.commit()
-            
+
     except sqlite3.Error as e:
         print(f"Erro ao inserir questão no banco de dados: {e}")
 
 
-def checar_questoes_inseridas(nome_do_banco: str, nome_da_tabela: str = 'questoes', limite: int = 10) -> List[Tuple]:
+def checar_questoes_inseridas(
+    nome_do_banco: str, nome_da_tabela: str = "questoes", limite: int = 10
+) -> List[Tuple]:
     """
     Conecta-se ao banco de dados, busca as questões adicionadas e as exibe.
 
@@ -237,56 +245,56 @@ def checar_questoes_inseridas(nome_do_banco: str, nome_da_tabela: str = 'questoe
     list of tuple
         Uma lista contendo os registros do banco de dados.
     """
-    db_file = f'{nome_do_banco}.db'
-    
+    db_file = f"{nome_do_banco}.db"
+
     print(f"\n--- CONSULTANDO DADOS na Tabela '{nome_da_tabela}' em '{db_file}' ---")
-    
+
     try:
         with sqlite3.connect(db_file) as conn:
             cursor = conn.cursor()
-            
+
             # Buscando todos os campos de todas as questões, limitando o resultado
             cursor.execute(f"SELECT * FROM {nome_da_tabela} LIMIT {limite};")
-            
+
             registros = cursor.fetchall()
-            
+
             if not registros:
                 print("⚠️ Nenhuma questão encontrada na tabela.")
                 return []
-            
+
             # Obtendo os nomes das colunas para exibir o cabeçalho (para melhor debug)
             nomes_colunas = [description[0] for description in cursor.description]
-            
+
             # --- Exibição Formatada ---
             print(f"\n✅ {len(registros)} Questões Encontradas (Limite: {limite}):")
-            
+
             # Exibe o cabeçalho (nomes das colunas)
             print(" | ".join(f"{nome:<15}" for nome in nomes_colunas))
             print("-" * (len(nomes_colunas) * 17))
-            
+
             # Exibe os dados (truncando strings longas como 'texto')
             for registro in registros:
                 linha_formatada = []
                 for i, valor in enumerate(registro):
-                    
+
                     # CORREÇÃO APLICADA AQUI: Tratamento do campo 'texto'
-                    if nomes_colunas[i] == 'texto':
+                    if nomes_colunas[i] == "texto":
                         valor_str = str(valor)
-                        
+
                         # Limita o texto a 12 caracteres + '...' para caber na coluna de 15
-                        if len(valor_str) > 15: 
+                        if len(valor_str) > 15:
                             display_text = valor_str[:12] + "..."
                         else:
                             display_text = valor_str
-                            
+
                         linha_formatada.append(f"{display_text:<15}")
-                    
+
                     else:
                         # Aplica a formatação padrão para outros campos
                         linha_formatada.append(f"{str(valor):<15}")
-                
+
                 print(" | ".join(linha_formatada))
-                
+
             return registros
 
     except sqlite3.Error as e:
@@ -310,29 +318,31 @@ def deletar_questao_por_id(nome_do_banco: str, questao_id: int) -> bool:
     bool
         True se a questão foi deletada com sucesso, False caso contrário.
     """
-    db_file = f'{nome_do_banco}.db'
-    
+    db_file = f"{nome_do_banco}.db"
+
     try:
         # 1. Conexão e Gerenciamento de Recurso
         with sqlite3.connect(db_file) as conn:
             cursor = conn.cursor()
-            
+
             # 2. Instrução SQL de Deleção
             # Usamos '?' para evitar ataques de injeção SQL, mesmo com um número inteiro
-            sql_delete = "DELETE FROM questoes WHERE id = ?" 
-            
+            sql_delete = "DELETE FROM questoes WHERE id = ?"
+
             # 3. Execução: passando a tupla (id,)
             cursor.execute(sql_delete, (questao_id,))
-            
+
             # 4. Confirmação da Transação
             conn.commit()
-            
+
             # Verifica quantas linhas foram afetadas para confirmar a deleção
             if cursor.rowcount > 0:
                 print(f"✅ Questão com ID {questao_id} deletada com sucesso.")
                 return True
             else:
-                print(f"⚠️ Nenhuma questão encontrada ou deletada com o ID {questao_id}.")
+                print(
+                    f"⚠️ Nenhuma questão encontrada ou deletada com o ID {questao_id}."
+                )
                 return False
 
     except sqlite3.Error as e:
@@ -340,7 +350,9 @@ def deletar_questao_por_id(nome_do_banco: str, questao_id: int) -> bool:
         return False
 
 
-def editar_questao_por_id(nome_do_banco: str, questao_id: int, updates: Dict[str, Any]) -> bool:
+def editar_questao_por_id(
+    nome_do_banco: str, questao_id: int, updates: Dict[str, Any]
+) -> bool:
     """
     Atualiza um ou mais campos de uma questão específica no banco de dados.
 
@@ -359,37 +371,41 @@ def editar_questao_por_id(nome_do_banco: str, questao_id: int, updates: Dict[str
     bool
         True se a questão foi atualizada com sucesso, False caso contrário.
     """
-    db_file = f'{nome_do_banco}.db'
-    
+    db_file = f"{nome_do_banco}.db"
+
     # 1. Preparação Dinâmica da Query SQL
     # Ex: 'dificuldade = ?, origem = ?'
     set_clauses = [f"{coluna} = ?" for coluna in updates.keys()]
     set_clause_str = ", ".join(set_clauses)
-    
+
     # Valores a serem atualizados (na mesma ordem das colunas)
     update_values = list(updates.values())
-    
+
     # A tupla final para a execução é: [valores dos updates] + [o ID da questão]
     sql_parameters = update_values + [questao_id]
-    
+
     # 2. Instrução SQL completa
-    sql_update = f"UPDATE questoes SET {set_clause_str} WHERE id = ?" 
-    
+    sql_update = f"UPDATE questoes SET {set_clause_str} WHERE id = ?"
+
     try:
         with sqlite3.connect(db_file) as conn:
             cursor = conn.cursor()
-            
+
             # 3. Execução da Query
             cursor.execute(sql_update, sql_parameters)
-            
+
             conn.commit()
-            
+
             # 4. Verificação
             if cursor.rowcount > 0:
-                print(f"✅ Questão com ID {questao_id} atualizada com sucesso. Campos alterados: {list(updates.keys())}")
+                print(
+                    f"✅ Questão com ID {questao_id} atualizada com sucesso. Campos alterados: {list(updates.keys())}"
+                )
                 return True
             else:
-                print(f"⚠️ Nenhuma questão encontrada ou alterada com o ID {questao_id}.")
+                print(
+                    f"⚠️ Nenhuma questão encontrada ou alterada com o ID {questao_id}."
+                )
                 return False
 
     except sqlite3.Error as e:
@@ -398,10 +414,7 @@ def editar_questao_por_id(nome_do_banco: str, questao_id: int, updates: Dict[str
 
 
 def popular_banco_com_classificacao(
-    banco_nome: str,
-    pdf_path: str,
-    csv_path: str,
-    pdf_delimiter: str = "Q."
+    banco_nome: str, pdf_path: str, csv_path: str, pdf_delimiter: str = "Q."
 ) -> None:
     """
     Lê questões de um PDF e metadados de um CSV, mapeia os dados
@@ -417,127 +430,135 @@ def popular_banco_com_classificacao(
         Caminho para o arquivo CSV contendo os metadados de classificação.
     pdf_delimiter : str
         Delimitador usado no PDF para iniciar uma nova questão (ex: "Q.").
-    
+
     Returns
     -------
     None
     """
-    
+
     print("--- INICIANDO FLUXO DE MAPEAMENTO E INSERÇÃO (CSV + PDF) ---")
-    
+
     # --- 1. Leitura e Preparação dos Metadados (CSV) ---
     try:
         # Carrega o CSV usando Pandas para fácil manipulação
         df = pd.read_csv(csv_path)
-        
+
         # O cabeçalho deve ser: número_questao, serie, origem, dificuldade, imagem, tema1, tema2, tema3
-        
+
         # Cria um dicionário de metadados, usando o número da questão como chave
         # Isso permite o mapeamento rápido com o índice do PDF
         metadata_map: Dict[int, Dict[str, Any]] = {}
-        
+
         for index, row in df.iterrows():
             # A chave de mapeamento deve ser o número da questão
             try:
                 # O número da questão no CSV (que deve ser 1, 2, 3...)
-                num_questao = int(row['numero_questao']) 
+                num_questao = int(row["numero_questao"])
             except ValueError:
-                print(f"⚠️ Aviso: 'numero_questao' inválido na linha {index + 2} do CSV. Ignorando linha.")
+                print(
+                    f"⚠️ Aviso: 'numero_questao' inválido na linha {index + 2} do CSV. Ignorando linha."
+                )
                 continue
 
             # Constrói a lista de temas (ignorando células vazias/NaN)
             temas = [
-                str(t) for t in [row['tema1'], row['tema2'], row['tema3']] 
-                if pd.notna(t) and str(t).strip() and str(t).lower() != 'none'
+                str(t)
+                for t in [row["tema1"], row["tema2"], row["tema3"]]
+                if pd.notna(t) and str(t).strip() and str(t).lower() != "none"
             ]
-            
+
             # Armazena os metadados
             metadata_map[num_questao] = {
-                'serie': row.get('serie'),
-                'origem': row.get('origem'),
-                'dificuldade': row.get('dificuldade'),
-                'imagem_path': row.get('imagem'),
-                'temas': temas
+                "serie": row.get("serie"),
+                "origem": row.get("origem"),
+                "dificuldade": row.get("dificuldade"),
+                "imagem_path": row.get("imagem"),
+                "temas": temas,
             }
-        
+
         print(f"✅ CSV Lido: {len(metadata_map)} metadados prontos para mapeamento.")
 
     except FileNotFoundError:
         print(f"❌ Erro: Arquivo CSV '{csv_path}' não encontrado.")
         return
     except KeyError as e:
-        print(f"❌ Erro de coluna: Verifique se o CSV tem o cabeçalho correto, faltando a coluna {e}.")
+        print(
+            f"❌ Erro de coluna: Verifique se o CSV tem o cabeçalho correto, faltando a coluna {e}."
+        )
         return
 
     # --- 2. Leitura dos Textos das Questões (PDF) ---
     textos_questoes: List[str] = extract_questions_from_OBFEP(pdf_path, pdf_delimiter)
-    
+
     if not textos_questoes:
         print(f"❌ Erro: Não foi possível extrair questões do PDF '{pdf_path}'.")
         return
-    
+
     print(f"✅ PDF Lido: {len(textos_questoes)} textos de questões extraídos.")
 
     # --- 3. Mapeamento, Criação de Objeto e Inserção no Banco ---
-    
+
     total_inserido = 0
-    
+
     # Iteração sobre a lista de textos. O índice (i) + 1 é o número da questão.
     for i, texto_questao in enumerate(textos_questoes):
-        num_questao = i + 1 # Questão 1, 2, 3...
-        
+        num_questao = i + 1  # Questão 1, 2, 3...
+
         # Pula a inserção se o metadado não existir para esta questão (ex: se o CSV for menor que o PDF)
         if num_questao not in metadata_map:
-            print(f"⚠️ Aviso: Questão {num_questao} do PDF não tem metadados no CSV. Pulando.")
+            print(
+                f"⚠️ Aviso: Questão {num_questao} do PDF não tem metadados no CSV. Pulando."
+            )
             continue
-            
+
         metadata = metadata_map[num_questao]
-        
+
         try:
             # Criação do objeto Questao com os dados completos
             nova_questao = Questao(
-                texto=texto_questao.strip(), # Limpa o texto
-                serie=metadata.get('serie', 'N/A'),
-                origem=metadata.get('origem', 'PDF'),
-                dificuldade=metadata.get('dificuldade', 'N/A'),
-                imagem_path=metadata.get('imagem_path'),
-                temas=metadata.get('temas')
+                texto=texto_questao.strip(),  # Limpa o texto
+                serie=metadata.get("serie", "N/A"),
+                origem=metadata.get("origem", "PDF"),
+                dificuldade=metadata.get("dificuldade", "N/A"),
+                imagem_path=metadata.get("imagem_path"),
+                temas=metadata.get("temas"),
             )
-            
+
             # 4. Inserção no banco de dados
             insert_question(banco_nome, nova_questao)
             total_inserido += 1
-            
+
         except Exception as e:
             print(f"❌ Erro ao processar/inserir Questão {num_questao}: {e}")
-            
-    print(f"\n--- FLUXO CONCLUÍDO. Total de {total_inserido} questões inseridas/atualizadas. ---")
 
+    print(
+        f"\n--- FLUXO CONCLUÍDO. Total de {total_inserido} questões inseridas/atualizadas. ---"
+    )
 
 
 def buscar_questao_por_id(nome_do_banco: str, questao_id: int) -> Optional[Dict]:
     """
     Busca uma questão no banco de dados pelo seu ID e retorna os dados como um dicionário.
     """
-    db_file = f'{nome_do_banco}.db'
-    
+    db_file = f"{nome_do_banco}.db"
+
     try:
         with sqlite3.connect(db_file) as conn:
             # Garante que as linhas sejam retornadas como objetos acessíveis por nome da coluna
-            conn.row_factory = sqlite3.Row  
+            conn.row_factory = sqlite3.Row
             cursor = conn.cursor()
-            
+
             # Seleciona todos os campos
             cursor.execute("SELECT * FROM questoes WHERE id = ?", (questao_id,))
-            
+
             registro = cursor.fetchone()
-            
+
             if registro:
                 # Converte o objeto Row para um dicionário padrão
-                return dict(registro) 
+                return dict(registro)
             else:
                 return None
-                
+
     except sqlite3.Error as e:
         print(f"❌ Erro ao buscar questão no banco de dados: {e}")
         return None
