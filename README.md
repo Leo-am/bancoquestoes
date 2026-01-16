@@ -1,6 +1,6 @@
 # Banco de Questões
 
-![Pylint Status](https://github.com/SEU_USUARIO/NOME_DO_REPOSITORIO/actions/workflows/pylint.yml/badge.svg)
+![Pylint Status](https://github.com/leo-am/bancoquestoes/actions/workflows/pylint.yml/badge.svg)
 
 Este projeto tem como objetivo reunir questões de física em um banco de dados que permite a geração automática de listas de exercícios em \latex de acordo com a série, tema e nível de dificuldade.
 
