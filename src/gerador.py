@@ -13,7 +13,7 @@ def buscar_questoes_por_tema(nome_do_banco: str, tema_alvo: str) -> List[Dict]:
             conn.row_factory = sqlite3.Row  # Retorna resultados como dicionários
             cursor = conn.cursor()
 
-            # O operador LIKE com % garante que a busca encontre a string em qualquer parte do campo.
+            # O operador LIKE com % garante que a busca encontre a string em qualquer parte.
             # Ex: Busca "Calorimetria" dentro de "Física, Termodinâmica, Calorimetria"
             sql_query = "SELECT * FROM questoes WHERE temas LIKE ?"
 
