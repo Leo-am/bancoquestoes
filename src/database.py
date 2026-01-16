@@ -1,12 +1,12 @@
+"""Módulo que contém todas as funções/classes para criar
+o banco de dados de questões."""
+
 import re
 import sqlite3
 from typing import Any, Dict, List, Optional, Tuple
 
 import pandas as pd
 import pdfplumber
-
-"""Módulo que contém todas as funções/classes para criar
-o banco de dados de questões."""
 
 
 class Questao:
