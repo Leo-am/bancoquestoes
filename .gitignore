@@ -165,16 +165,12 @@ cython_debug/
 data/database/*.db
 
 # --- Dados e Imagens ---
-data/raw/*.pdf
-data/processed/*.pdf
+data/raw/
+data/processed/
 data/figuras/
 
 # --- LaTeX (Arquivos temporários) ---
-outputs/*.aux
-outputs/*.log
-outputs/*.toc
-outputs/*.out
-outputs/*.pdf
+outputs/
 
 # --- Sistema ---
 .DS_Store
