@@ -3,95 +3,60 @@ o banco de dados de questões."""
 
 import re
 import sqlite3
+from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 import pandas as pd
 import pdfplumber
 
+from src.modelos import Questao
 
-class Questao:
+
+def create_database(nome_do_banco: str):
     """
-    Representa uma única questão com todos os seus atributos,
-    garantindo que os dados sejam agrupados de forma consistente.
+    Cria o banco de dados SQLite na pasta correta: data/database/
     """
+    # 1. Localiza a raiz do projeto (assumindo que este arquivo está em src/)
+    # .parent é 'src', .parent.parent é a raiz 'bancodequestoes'
+    raiz_projeto = Path(__file__).resolve().parent.parent
 
-    def __init__(
-        self,
-        texto: str,
-        serie: str,
-        origem: str,
-        dificuldade: str,
-        imagem_path: Optional[str] = None,
-        temas: Optional[List[str]] = None,
-    ):
-        self.texto = texto
-        self.serie = serie
-        self.origem = origem
-        self.dificuldade = dificuldade
-        self.imagem_path = imagem_path
-        self.temas = temas if temas is not None else []
+    # 2. Define o caminho completo para a pasta do banco
+    pasta_db = raiz_projeto / "data" / "database"
 
-    def to_tuple(self) -> tuple:
-        """
-        Converte os dados da questão em uma tupla na ordem esperada pelo SQLite
-        (texto, imagem, serie, origem, temas_str, dificuldade).
-        """
-        # Converte a lista de temas em uma string separada por vírgulas
-        temas_str = ", ".join(self.temas)
+    # 3. Garante que a pasta existe (cria se não existir)
+    pasta_db.mkdir(parents=True, exist_ok=True)
 
-        return (
-            self.texto,
-            self.serie,
-            self.origem,
-            self.dificuldade,
-            self.imagem_path,
-            temas_str,
-        )
+    # 4. Define o caminho final do arquivo .db
+    caminho_final_db = pasta_db / f"{nome_do_banco}.db"
 
-
-def create_database(nome: str) -> None:
-    """
-    Cria o banco de dados f'{nome}.db' e a tabela 'questoes' (se não existirem),
-    utilizando a ordem de colunas especificada:
-    (texto, serie, origem, dificuldade, imagem, temas).
-
-    Parameters
-    ----------
-    nome : str
-        String com o nome do banco de dados (ex: 'meu_banco_questoes').
-
-    Returns
-    -------
-    None
-    """
-    db_file = f"{nome}.db"
-
+    # 5. Conecta (o SQLite criará o arquivo no caminho absoluto especificado)
     try:
-        # Uso do 'with' para garantir que a conexão seja fechada automaticamente
-        with sqlite3.connect(db_file) as conn:
-            cursor = conn.cursor()
-            cursor.execute("PRAGMA encoding = 'UTF-8';")
-            cursor.execute(
-                """
-                CREATE TABLE IF NOT EXISTS questoes (
-                    id INTEGER PRIMARY KEY,
-                    
-                    texto TEXT NOT NULL,
-                    serie TEXT,              
-                    origem TEXT,             
-                    dificuldade TEXT,         
-                    imagem TEXT,             
-                    temas TEXT               
-                )
+        conn = sqlite3.connect(str(caminho_final_db))
+        cursor = conn.cursor()
+        cursor.execute(
             """
+            CREATE TABLE IF NOT EXISTS questoes (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                texto TEXT NOT NULL,
+                serie TEXT,
+                origem TEXT,
+                dificuldade TEXT,
+                imagem TEXT,
+                temas TEXT
             )
+        """
+        )
+        conn.commit()
+        conn.close()
+        print(f"✅ Banco de dados criado/verificado em: {caminho_final_db}")
+    except Exception as e:
+        print(f"❌ Erro ao criar o banco de dados: {e}")
 
-            print(
-                f"Banco de dados '{db_file}' e tabela 'questoes' criados/verificados."
-            )
 
-    except sqlite3.Error as e:
-        print(f"Erro ao criar o banco de dados/tabela '{db_file}': {e}")
+# Para garantir que a inserção também use o caminho correto:
+def get_db_path(nome_do_banco: str) -> Path:
+    raiz = Path(__file__).resolve().parent.parent
+    return raiz / "data" / "database" / f"{nome_do_banco}.db"
 
 
 def extract_questions_from_pdf(pdf_path: str, delimiter: str) -> List[str]:
@@ -446,7 +411,7 @@ def popular_banco_com_classificacao(
         # Carrega o CSV usando Pandas para fácil manipulação
         df = pd.read_csv(csv_path)
 
-        # O cabeçalho deve ser: 
+        # O cabeçalho deve ser:
         # número_questao, serie, origem, dificuldade, imagem, tema1, tema2, tema3
 
         # Cria um dicionário de metadados, usando o número da questão como chave
@@ -509,7 +474,7 @@ def popular_banco_com_classificacao(
     for i, texto_questao in enumerate(textos_questoes):
         num_questao = i + 1  # Questão 1, 2, 3...
 
-        # Pula a inserção se o metadado não existir para esta questão 
+        # Pula a inserção se o metadado não existir para esta questão
         # (ex: se o CSV for menor que o PDF)
         if num_questao not in metadata_map:
             print(
