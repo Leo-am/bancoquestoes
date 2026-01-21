@@ -437,3 +437,56 @@ def buscar_questao_por_id(nome_do_banco: str, questao_id: int) -> Optional[Dict]
     except sqlite3.Error as e:
         print(f"❌ Erro ao buscar questão no banco de dados: {e}")
         return None
+
+
+def limpar_para_latex(texto: str) -> str:
+    if not texto: return ""
+
+    # 1. Caracteres Reservados (Exceto o $ que controlaremos manualmente)
+    for char in ["%", "_", "&", "#", "{", "}"]:
+        texto = texto.replace(char, f"\\{char}")
+
+    # 2. PADRONIZAÇÃO INICIAL: Graus e Símbolos Gregos
+    # Fazemos isso antes das unidades para o Regex de unidade reconhecê-los
+    texto = texto.replace("°C", r"\celsius")
+    texto = texto.replace("°", r"\degree")
+    gregas = {"μ": r"\textmu ", "π": r"\textpi ", "Δ": r"\textDelta ", "Ω": r"\ohm "}
+    for k, v in gregas.items():
+        texto = texto.replace(k, v)
+
+    # 3. NOTAÇÃO CIENTÍFICA COM UNIDADE (O "Tudo em um")
+    # Ex: 12x10^-6 °C^-1 -> \qty{12e-6}{\celsius^{-1}}
+    # O comando \qty do siunitx v3 combina número e unidade perfeitamente.
+    padrao_completo = r"(\d+[,.]?\d*)\s*[xX·*]\s*10\^?(-?\d+)\s*([a-zA-Z\\]+(?:\^?-?\d+)?)"
+    
+    def tratar_completo(m):
+        val = m.group(1).replace(",", ".")
+        exp = m.group(2)
+        uni = m.group(3).replace("^", "^{") + "}" if "^" in m.group(3) else m.group(3)
+        return rf"\qty{{{val}e{exp}}}{{{uni}}}"
+
+    texto = re.sub(padrao_completo, tratar_completo, texto)
+
+    # 4. NOTAÇÃO CIENTÍFICA PURA (Sem unidade colada)
+    # Ex: 3x10^8 -> \num{3e8}
+    texto = re.sub(r"(\d+[,.]?\d*)\s*[xX·*]\s*10\^?(-?\d+)", r"\\num{\1e\2}", texto)
+    texto = re.sub(r"\b10\^([-]?\d+)\b", r"\\num{1e\1}", texto)
+
+    # 5. UNIDADES SOLTAS (Sem notação científica)
+    # Ex: 10 m/s -> \unit{10.m/s}
+    padrao_unidade = r"(\d+[,.]?\d*)\s*([a-zA-Z\\]+(?:\^?-?\d+)?)"
+    
+    def tratar_unidade(m):
+        # Evita processar o que já foi transformado em comando LaTeX
+        if "\\" in m.group(0): return m.group(0)
+        val = m.group(1).replace(",", ".")
+        uni = m.group(2).replace("^", "^{") + "}" if "^" in m.group(2) else m.group(2)
+        return rf"\unit{{{val}.{uni}}}"
+
+    texto = re.sub(padrao_unidade, tratar_unidade, texto)
+
+    # 6. EXPOENTES MATEMÁTICOS RESTANTES (Ex: x^2)
+    # Só atua se NÃO houver uma barra invertida antes (para não estragar comandos LaTeX)
+    texto = re.sub(r"(?<!\\)([a-zA-Z])\^?(-?\d+)", r"$\1^{\2}$", texto)
+
+    return texto
