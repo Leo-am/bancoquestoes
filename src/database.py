@@ -9,6 +9,7 @@ from typing import Any, Dict, List, Optional, Tuple
 import pandas as pd
 import pdfplumber
 
+from src.extrator import extract_questions_from_pdf
 from src.modelos import Questao
 
 
@@ -361,7 +362,7 @@ def popular_banco_com_classificacao(
         return
 
     # --- 2. Leitura dos Textos das Questões (PDF) ---
-    textos_questoes: List[str] = extract_questions_from_OBFEP(pdf_path, pdf_delimiter)
+    textos_questoes: List[str] = extract_questions_from_pdf(pdf_path, pdf_delimiter)
 
     if not textos_questoes:
         print(f"❌ Erro: Não foi possível extrair questões do PDF '{pdf_path}'.")
