@@ -4,14 +4,28 @@ a lista de questões a partir do banco de dados."""
 import os
 import re
 import sqlite3
-from typing import Dict, List
 from pathlib import Path
-from src.modelos import Questao
+from typing import Dict, List
+
 from src.database import limpar_para_latex
+from src.modelos import Questao
+
 
 def buscar_questoes_por_tema(nome_do_banco: str, tema: str):
     """
     Busca todas as questões que contenham o tema especificado.
+
+    Parameters:
+    -----------
+    nome_do_banco : str
+        O nome do banco de dados a ser utilizado (sem a extensão .db).
+    tema : str
+        O tema a ser buscado nas questões.
+
+    Returns:
+    --------
+    List[Questao]
+        Uma lista de objetos Questao que correspondem ao tema buscado.
     """
     # 1. Localiza a raiz do projeto de forma absoluta
     raiz_projeto = Path(__file__).resolve().parent.parent
@@ -29,13 +43,13 @@ def buscar_questoes_por_tema(nome_do_banco: str, tema: str):
         with sqlite3.connect(str(caminho_db)) as conn:
             conn.row_factory = sqlite3.Row
             cursor = conn.cursor()
-            
+
             # 3. Busca usando LIKE para encontrar o tema dentro da string de temas
             query = "SELECT * FROM questoes WHERE temas LIKE ?"
             cursor.execute(query, (f"%{tema}%",))
-            
+
             rows = cursor.fetchall()
-            
+
             for row in rows:
                 lista_temas = row["temas"].split(", ") if row["temas"] else []
                 q = Questao(
@@ -44,10 +58,10 @@ def buscar_questoes_por_tema(nome_do_banco: str, tema: str):
                     origem=row["origem"],
                     dificuldade=row["dificuldade"],
                     imagem_path=row["imagem"],
-                    temas=lista_temas
+                    temas=lista_temas,
                 )
                 questoes_encontradas.append(q)
-        
+
         return questoes_encontradas
 
     except sqlite3.OperationalError as e:
@@ -58,6 +72,19 @@ def buscar_questoes_por_tema(nome_do_banco: str, tema: str):
 def gerar_lista_exercicios_latex(nome_do_banco: str, tema: str, nome_arquivo: str):
     """
     Gera um arquivo .tex em duas colunas na pasta 'outputs'.
+
+    Parameters:
+    -----------
+    nome_do_banco : str
+        O nome do banco de dados a ser utilizado (sem a extensão .db).
+    tema : str
+        O tema a ser buscado nas questões.
+    nome_arquivo : str
+        O nome do arquivo .tex a ser gerado (sem a extensão).
+
+    Returns:
+    --------
+    None
     """
     # 1. Obter as questões
     # Note: inverti a ordem para bater com a assinatura da sua função de busca
@@ -83,16 +110,18 @@ def gerar_lista_exercicios_latex(nome_do_banco: str, tema: str, nome_arquivo: st
     conteudo_latex.append(r"\usepackage{amsmath, amssymb}")
     conteudo_latex.append(r"\usepackage{graphicx}")
     conteudo_latex.append(r"\usepackage[portuguese]{babel}")
-    conteudo_latex.append(r"\usepackage{siunitx}")     # Para \num e \unit
-    conteudo_latex.append(r"\usepackage{textgreek}")   # Para letras gregas no texto
-    conteudo_latex.append(r"\sisetup{output-decimal-marker = {,}}") # Usa vírgula decimal
+    conteudo_latex.append(r"\usepackage{siunitx}")  # Para \num e \unit
+    conteudo_latex.append(r"\usepackage{textgreek}")  # Para letras gregas no texto
+    conteudo_latex.append(
+        r"\sisetup{output-decimal-marker = {,}}"
+    )  # Usa vírgula decimal
     # Define margens de 2cm
     conteudo_latex.append(r"\usepackage[margin=2cm]{geometry}")
-    
+
     conteudo_latex.append(r"\title{Lista de Exercícios: " + tema + "}")
     conteudo_latex.append(r"\author{Banco de Questões}")
     conteudo_latex.append(r"\date{\today}")
-    
+
     conteudo_latex.append(r"\begin{document}")
     conteudo_latex.append(r"\maketitle")
     conteudo_latex.append(r"\section*{Questões}")
@@ -112,16 +141,18 @@ def gerar_lista_exercicios_latex(nome_do_banco: str, tema: str, nome_arquivo: st
 
         if len(partes) > 1:
             # Adiciona o enunciado primeiro
-            conteudo_latex.append(partes[0].strip() + r"\\[5pt]") # Adiciona um pequeno espaço após enunciado
-            
+            conteudo_latex.append(
+                partes[0].strip() + r"\\[5pt]"
+            )  # Adiciona um pequeno espaço após enunciado
+
             # Reconstrói as alternativas uma em cada linha
             lista_linhas = []
             for j in range(1, len(partes), 2):
-                marcador = partes[j].strip()      # Ex: "a)"
-                texto_alt = partes[j+1].strip()   # Ex: "40 m/s"
+                marcador = partes[j].strip()  # Ex: "a)"
+                texto_alt = partes[j + 1].strip()  # Ex: "40 m/s"
                 # Formata como: a) 40 m/s \\
                 lista_linhas.append(rf"{marcador} {texto_alt} \\")
-            
+
             # Junta todas as alternativas e adiciona ao conteúdo
             conteudo_latex.append("\n".join(lista_linhas))
         else:
@@ -136,7 +167,7 @@ def gerar_lista_exercicios_latex(nome_do_banco: str, tema: str, nome_arquivo: st
             conteudo_latex.append(
                 r"    \includegraphics[width=\linewidth]{" + str(q.imagem_path) + r"}"
             )
-            conteudo_latex.append(r"    \caption*{}") # Caption sem número
+            conteudo_latex.append(r"    \caption*{}")  # Caption sem número
             conteudo_latex.append(r"\end{figure}")
 
     conteudo_latex.append(r"\end{document}")

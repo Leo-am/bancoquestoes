@@ -16,6 +16,15 @@ from src.modelos import Questao
 def create_database(nome_do_banco: str):
     """
     Cria o banco de dados SQLite na pasta correta: data/database/
+
+    Parameters:
+    -----------
+    nome_do_banco : str
+        O nome do banco de dados a ser criado (sem a extensão .db).
+
+    Returns:
+    --------
+    None
     """
     # 1. Localiza a raiz do projeto (assumindo que este arquivo está em src/)
     # .parent é 'src', .parent.parent é a raiz 'bancodequestoes'
@@ -56,6 +65,19 @@ def create_database(nome_do_banco: str):
 
 # Para garantir que a inserção também use o caminho correto:
 def get_db_path(nome_do_banco: str) -> Path:
+    """
+    Retorna o caminho completo para o arquivo do banco de dados.
+
+    Parameters
+    ----------
+    nome_do_banco : str
+        Nome do banco de dados (sem a extensão .db).
+
+    Returns
+    -------
+    Path
+        O caminho completo para o arquivo do banco de dados.
+    """
     raiz = Path(__file__).resolve().parent.parent
     return raiz / "data" / "database" / f"{nome_do_banco}.db"
 
@@ -414,6 +436,18 @@ def popular_banco_com_classificacao(
 def buscar_questao_por_id(nome_do_banco: str, questao_id: int) -> Optional[Dict]:
     """
     Busca uma questão no banco de dados pelo seu ID e retorna os dados como um dicionário.
+
+    Parameters:
+    -----------
+    nome_do_banco : str
+        O nome do banco de dados a ser utilizado (sem a extensão .db).
+    questao_id : int
+        O ID da questão a ser buscada.
+
+    Returns:
+    --------
+    Optional[Dict]
+        Um dicionário com os dados da questão, ou None se não encontrada.
     """
     db_file = f"{nome_do_banco}.db"
 
@@ -440,7 +474,21 @@ def buscar_questao_por_id(nome_do_banco: str, questao_id: int) -> Optional[Dict]
 
 
 def limpar_para_latex(texto: str) -> str:
-    if not texto: return ""
+    """
+    Limpa o texto para formatação em LaTeX.
+
+    Parameters:
+    -----------
+    texto : str
+        O texto a ser limpo.
+
+    Returns:
+    --------
+    str
+        O texto limpo e formatado para LaTeX.
+    """
+    if not texto:
+        return ""
 
     # 1. Caracteres Reservados (Exceto o $ que controlaremos manualmente)
     for char in ["%", "_", "&", "#", "{", "}"]:
@@ -457,8 +505,10 @@ def limpar_para_latex(texto: str) -> str:
     # 3. NOTAÇÃO CIENTÍFICA COM UNIDADE (O "Tudo em um")
     # Ex: 12x10^-6 °C^-1 -> \qty{12e-6}{\celsius^{-1}}
     # O comando \qty do siunitx v3 combina número e unidade perfeitamente.
-    padrao_completo = r"(\d+[,.]?\d*)\s*[xX·*]\s*10\^?(-?\d+)\s*([a-zA-Z\\]+(?:\^?-?\d+)?)"
-    
+    padrao_completo = (
+        r"(\d+[,.]?\d*)\s*[xX·*]\s*10\^?(-?\d+)\s*([a-zA-Z\\]+(?:\^?-?\d+)?)"
+    )
+
     def tratar_completo(m):
         val = m.group(1).replace(",", ".")
         exp = m.group(2)
@@ -475,10 +525,11 @@ def limpar_para_latex(texto: str) -> str:
     # 5. UNIDADES SOLTAS (Sem notação científica)
     # Ex: 10 m/s -> \unit{10.m/s}
     padrao_unidade = r"(\d+[,.]?\d*)\s*([a-zA-Z\\]+(?:\^?-?\d+)?)"
-    
+
     def tratar_unidade(m):
         # Evita processar o que já foi transformado em comando LaTeX
-        if "\\" in m.group(0): return m.group(0)
+        if "\\" in m.group(0):
+            return m.group(0)
         val = m.group(1).replace(",", ".")
         uni = m.group(2).replace("^", "^{") + "}" if "^" in m.group(2) else m.group(2)
         return rf"\unit{{{val}.{uni}}}"

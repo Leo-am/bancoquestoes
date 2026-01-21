@@ -10,6 +10,18 @@ from src.modelos import Questao
 
 
 def buscar_todas_questoes(nome_do_banco: str) -> pd.DataFrame:
+    """Busca todas as questões no banco de dados e as retorna como um DataFrame.
+
+    Parameters:
+    -----------
+    nome_do_banco : str
+        O nome do banco de dados a ser utilizado (sem a extensão .db).
+
+    Returns:
+    --------
+    pd.DataFrame
+        Um DataFrame contendo todas as questões do banco de dados.
+    """
     db_file = f"{nome_do_banco}.db"
     try:
         # Pandas pode ler SQL diretamente, retornando um DataFrame
@@ -25,6 +37,18 @@ def buscar_todas_questoes(nome_do_banco: str) -> pd.DataFrame:
 def buscar_questao_por_id(id_questao: int, nome_do_banco: str):
     """
     Busca uma questão pelo ID e retorna uma instância da classe Questao.
+
+    Parameters:
+    -----------
+    id_questao : int
+        O ID da questão a ser buscada.
+    nome_do_banco : str
+        O nome do banco de dados a ser utilizado (sem a extensão .db).
+
+    Returns:
+    --------
+    Questao
+        Uma instância da classe Questao correspondente ao ID buscado.
     """
     # 1. Localiza o caminho absoluto do banco de dados
     raiz_projeto = Path(__file__).resolve().parent.parent

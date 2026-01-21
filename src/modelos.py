@@ -8,6 +8,25 @@ class Questao:
     """
     Representa uma única questão com todos os seus atributos,
     garantindo que os dados sejam agrupados de forma consistente.
+
+    Parameters:
+    -----------
+    texto : str
+        O texto da questão.
+    serie : str
+        A série da questão.
+    origem : str
+        A origem da questão.
+    dificuldade : str
+        A dificuldade da questão.
+    imagem_path : Optional[str]
+        O caminho da imagem associada à questão (se houver).
+    temas : Optional[List[str]]
+        A lista de temas associados à questão.
+
+    Returns:
+    --------
+    None
     """
 
     def __init__(
