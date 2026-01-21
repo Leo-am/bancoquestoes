@@ -541,3 +541,35 @@ def limpar_para_latex(texto: str) -> str:
     texto = re.sub(r"(?<!\\)([a-zA-Z])\^?(-?\d+)", r"$\1^{\2}$", texto)
 
     return texto
+
+def exportar_db_para_csv(db_path, csv_path):
+    """
+    Exporta o conteúdo do banco de dados para um arquivo CSV.
+
+    Parameters:
+    -----------
+    db_path : str
+        O caminho para o arquivo do banco de dados (ex: "data/database/questoes.db").
+    csv_path : str
+        O caminho para o arquivo CSV de saída (ex: "outputs/questoes.csv").
+
+    Returns:
+    --------
+    None
+    """
+    # 1. Conecta ao banco
+    conn = sqlite3.connect(db_path)
+    
+    # 2. Lê a tabela inteira para um DataFrame
+    df = pd.read_sql_query("SELECT * FROM questoes", conn)
+    
+    # 3. Remove a coluna 'texto' (se ela existir)
+    if 'texto' in df.columns:
+        df = df.drop(columns=['texto'])
+    
+    # 4. Exporta para CSV
+    # index=False evita que o Pandas crie uma coluna de números extras
+    df.to_csv(csv_path, index=False, encoding='utf-8-sig')
+    
+    conn.close()
+    print(f"Exportação concluída: {csv_path}")
