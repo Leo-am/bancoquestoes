@@ -1,7 +1,7 @@
 """Módulo que contém todas as classes para criar
 o banco de dados de questões."""
 
-from typing import Any, Dict, List, Optional, Tuple
+from typing import List, Optional
 
 
 class Questao:
