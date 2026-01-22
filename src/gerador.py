@@ -69,7 +69,7 @@ def buscar_questoes_por_tema(nome_do_banco: str, tema: str):
         return []
 
 
-def gerar_lista_exercicios_latex(nome_do_banco: str, tema: str, nome_arquivo: str):
+def gerar_lista_exercicios_latex(nome_do_banco: str, tema: str, nome_arquivo: str, overleaf: bool = False):
     """
     Gera um arquivo .tex em duas colunas na pasta 'outputs'.
 
@@ -81,6 +81,8 @@ def gerar_lista_exercicios_latex(nome_do_banco: str, tema: str, nome_arquivo: st
         O tema a ser buscado nas questões.
     nome_arquivo : str
         O nome do arquivo .tex a ser gerado (sem a extensão).
+    overleaf : bool
+        Indica se o caminho deve ser ajustado para uso no Overleaf.
 
     Returns:
     --------
@@ -124,7 +126,7 @@ def gerar_lista_exercicios_latex(nome_do_banco: str, tema: str, nome_arquivo: st
 
     conteudo_latex.append(r"\begin{document}")
     conteudo_latex.append(r"\maketitle")
-    conteudo_latex.append(r"\section*{Questões}")
+    # conteudo_latex.append(r"\section*{Questões}")
 
     # 3.2. Adicionar as Questões
     for i, q in enumerate(questoes, 1):
@@ -159,13 +161,41 @@ def gerar_lista_exercicios_latex(nome_do_banco: str, tema: str, nome_arquivo: st
             # Se não encontrar alternativas, coloca o texto original
             conteudo_latex.append(texto_final)
 
+        def ajustar_caminho(match):
+            """Ajusta o caminho da imagem para o formato correto.
+            
+            Parameters:
+            -----------
+            match : re.Match
+                O objeto de correspondência da regex contendo o caminho da imagem.
+
+            Returns:
+            --------
+            str
+                O caminho ajustado da imagem no formato correto.
+            """
+            caminho_original = q.imagem_path
+
+            # Comportamento padrão: caminho local
+            novo_caminho = caminho_original
+
+            # Ajuste para Overleaf
+            if overleaf:
+                origem_limpa = re.sub(r'[^\w\-]', '_', q.origem)
+                nome_arquivo = caminho_original.split('/')[-1]
+                novo_caminho = f"{origem_limpa}/{nome_arquivo}"
+        
+            return novo_caminho
+
+        imag_path = ajustar_caminho(overleaf)
+
         # 3.3. Adicionar Imagem (ajustada para largura da coluna)
         if q.imagem_path and str(q.imagem_path).lower() != "none":
             conteudo_latex.append(r"\begin{figure}[h!]")
             conteudo_latex.append(r"    \centering")
             # width=\linewidth garante que a imagem caiba na coluna
             conteudo_latex.append(
-                r"    \includegraphics[width=\linewidth]{" + str(q.imagem_path) + r"}"
+                rf"    \includegraphics[width=\linewidth]{{{imag_path}}}"
             )
             conteudo_latex.append(r"    \caption*{}")  # Caption sem número
             conteudo_latex.append(r"\end{figure}")
