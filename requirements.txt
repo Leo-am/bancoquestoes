@@ -1,5 +1,15 @@
-pandas
-pdfplumber
-pylint
-black
-isort
+# --- Extração de Dados e OCR de PDFs ---
+fitz                 # Nome de importação do PyMuPDF (extração rápida de imagens e texto)
+pdfplumber           # Excelente para extrair tabelas e texto com precisão geométrica
+
+# --- Manipulação de Dados e Imagens ---
+pandas               # Essencial para análise de dados e conversão de tabelas para Excel/LaTeX
+pillow               # Versão moderna da PIL, usada para processar e salvar as imagens extraídas
+
+# --- Qualidade de Código e Formatação (Dev) ---
+black                # Formatador de código "determinístico" (garante estilo uniforme)
+isort                # Organiza automaticamente a ordem dos 'imports' no topo dos ficheiros
+
+# --- Ambiente de Desenvolvimento e Gestão ---
+jupyterlab           # Interface interativa para testar os extratores e visualizar dados
+pip                  # Gestor de pacotes padrão do Python
