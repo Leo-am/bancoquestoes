@@ -2,16 +2,15 @@
 Módulo para extração de questões de arquivos PDF utilizando Regex.
 """
 
+import io
+import os
 import re
 from pathlib import Path
 from typing import List
 
-import pdfplumber
-
 import fitz  # PyMuPDF
-import io
+import pdfplumber
 from PIL import Image
-import os
 
 
 def extract_questions_from_pdf(filename: str, base_char: str = "B") -> List[str]:
@@ -201,6 +200,7 @@ def limpar_texto_extracao(texto: str) -> str:
 
     return texto.strip()
 
+
 if __name__ == "__main__":
     # Teste rápido se rodar este arquivo diretamente
     res = extract_questions_from_pdf("prova_exemplo.pdf", "B")
@@ -208,8 +208,7 @@ if __name__ == "__main__":
         print(f"Primeira questão: {res[0][:50]}...")
 
 
-
-def extrair_imagens_do_pdf(caminho_pdf, pasta_saida, min_px = 100):
+def extrair_imagens_do_pdf(caminho_pdf, pasta_saida, min_px=100):
     """
     Extrai imagens de um arquivo PDF e as salva em uma pasta de saída.
 
@@ -229,74 +228,77 @@ def extrair_imagens_do_pdf(caminho_pdf, pasta_saida, min_px = 100):
     # Cria a pasta de saída se não existir
     if not os.path.exists(pasta_saida):
         os.makedirs(pasta_saida)
-        
+
     # Abre o documento
     pdf = fitz.open(caminho_pdf)
-    
+
     contador = 1
     for num_pagina in range(len(pdf)):
         pagina = pdf[num_pagina]
         lista_imagens = pagina.get_images(full=True)
-        
+
         for img_index, img in enumerate(lista_imagens):
             xref = img[0]  # Referência do objeto
             base_image = pdf.extract_image(xref)
             image_bytes = base_image["image"]
-            extensao = base_image["ext"] # png, jpeg, etc.
+            extensao = base_image["ext"]  # png, jpeg, etc.
 
             # --- FILTRO DE TAMANHO ---
             # base_image["width"] e base_image["height"] dão os pixels reais
             largura = base_image["width"]
             altura = base_image["height"]
-            
+
             if largura < min_px or altura < min_px:
                 # Se a imagem for menor que 100x100 (exemplo), ela é ignorada
                 continue
-            
+
             # Carrega a imagem para garantir que não está corrompida
             image = Image.open(io.BytesIO(image_bytes))
-            
+
             # Nome do arquivo: pagina_X_imagem_Y.png
             nome_arquivo = f"pag_{num_pagina+1}_img_{contador}.{extensao}"
             caminho_final = os.path.join(pasta_saida, nome_arquivo)
-            
+
             image.save(caminho_final)
             print(f"Salvo: {nome_arquivo}")
             contador += 1
 
     pdf.close()
 
+
 def extrair_imagens_por_questao(caminho_pdf, pasta_saida, delimiter=r"Questão\s*(\d+)"):
     pdf = fitz.open(caminho_pdf)
-    
+
     if not os.path.exists(pasta_saida):
         os.makedirs(pasta_saida)
 
-    questao_atual = "preambulo" # Caso haja imagens antes da primeira questão
+    questao_atual = "preambulo"  # Caso haja imagens antes da primeira questão
     contador_img_por_questao = 1
 
     for num_pagina in range(len(pdf)):
         pagina = pdf[num_pagina]
-        
+
         # 1. ANALISAR O TEXTO DA PÁGINA PARA ATUALIZAR O DELIMITADOR
         # Extraímos o texto para saber se mudamos de questão nesta página
         texto_pagina = pagina.get_text()
         matches = re.findall(delimiter, texto_pagina)
-        
+
         # 2. LOCALIZAR IMAGENS E SUAS POSIÇÕES
         lista_imagens = pagina.get_images(full=True)
-        
+
         # Para maior precisão, pegamos onde cada imagem está na página (y-coordinate)
         # e onde cada "Questão X" está na página.
         items_pagina = []
-        
+
         # Adiciona as questões encontradas à lista de busca de posição
         for m in re.finditer(delimiter, texto_pagina):
             # Encontra a posição vertical (y) do texto da questão
             areas = pagina.search_for(m.group(0))
             if areas:
                 y_pos = areas[0].y1
-                items_pagina.append({"tipo": "questao", "valor": m.group(0), "y": y_pos})
+                items_pagina.append(
+                    {"tipo": "questao", "valor": m.group(0), "y": y_pos}
+                )
 
         # Adiciona as imagens encontradas à lista de busca de posição
         for img in lista_imagens:
@@ -314,25 +316,27 @@ def extrair_imagens_por_questao(caminho_pdf, pasta_saida, delimiter=r"Questão\s
         for item in items_pagina:
             if item["tipo"] == "questao":
                 # Limpa o nome da questão para ser um nome de arquivo válido
-                nova_questao = re.sub(r'[^\w\-]', '_', item["valor"])
+                nova_questao = re.sub(r"[^\w\-]", "_", item["valor"])
                 if nova_questao != questao_atual:
                     questao_atual = nova_questao
-                    contador_img_por_questao = 1 # Reinicia contagem de imagens para a nova questão
-            
+                    contador_img_por_questao = (
+                        1  # Reinicia contagem de imagens para a nova questão
+                    )
+
             elif item["tipo"] == "imagem":
                 base_image = pdf.extract_image(item["xref"])
-                
+
                 # Filtro de tamanho mínimo (ex: 100px)
                 if base_image["width"] < 100 or base_image["height"] < 100:
                     continue
-                
+
                 # Nome final: Questao_01_img_1.png
                 nome_arquivo = f"{questao_atual}_img_{contador_img_por_questao}.{base_image['ext']}"
                 caminho_final = os.path.join(pasta_saida, nome_arquivo)
-                
+
                 with open(caminho_final, "wb") as f:
                     f.write(base_image["image"])
-                
+
                 print(f"Detectada imagem para {questao_atual} -> {nome_arquivo}")
                 contador_img_por_questao += 1
 

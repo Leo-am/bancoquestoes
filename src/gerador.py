@@ -1,11 +1,9 @@
 """Módulo que contém todas as funções/classes para criar
 a lista de questões a partir do banco de dados."""
 
-import os
 import re
 import sqlite3
 from pathlib import Path
-from typing import Dict, List
 
 from src.database import limpar_para_latex
 from src.modelos import Questao
@@ -69,7 +67,9 @@ def buscar_questoes_por_tema(nome_do_banco: str, tema: str):
         return []
 
 
-def gerar_lista_exercicios_latex(nome_do_banco: str, tema: str, nome_arquivo: str, overleaf: bool = False):
+def gerar_lista_exercicios_latex(
+    nome_do_banco: str, tema: str, nome_arquivo: str, overleaf: bool = False
+):
     """
     Gera um arquivo .tex em duas colunas na pasta 'outputs'.
 
@@ -163,7 +163,7 @@ def gerar_lista_exercicios_latex(nome_do_banco: str, tema: str, nome_arquivo: st
 
         def ajustar_caminho(match):
             """Ajusta o caminho da imagem para o formato correto.
-            
+
             Parameters:
             -----------
             match : re.Match
@@ -181,10 +181,10 @@ def gerar_lista_exercicios_latex(nome_do_banco: str, tema: str, nome_arquivo: st
 
             # Ajuste para Overleaf
             if overleaf:
-                origem_limpa = re.sub(r'[^\w\-]', '_', q.origem)
-                nome_arquivo = caminho_original.split('/')[-1]
+                origem_limpa = re.sub(r"[^\w\-]", "_", q.origem)
+                nome_arquivo = caminho_original.split("/")[-1]
                 novo_caminho = f"{origem_limpa}/{nome_arquivo}"
-        
+
             return novo_caminho
 
         imag_path = ajustar_caminho(overleaf)
