@@ -10,10 +10,12 @@ No momento, o foco é adicionar ao banco de dados as questões da [Olimpíada Br
 
 1. O usuário deve incluir os pdfs com as questões na pasta data/raw.
 2. Na pasta data/processed, devem ser incluídos arquivos .csv, com o seguinte formato:
+   
    |numero_questao|serie|origem|dificuldade|imagem|tema1|tema2|tema3|
 
 Exemplo:
 |numero_questao|serie|origem|dificuldade|imagem|tema1|tema2|tema3|
+|--------------|-----|------|-----------|------|-----|-----|-----|
 |1|Primeiro Ano|OBFEP_2025|7|../data/figuras/B.1|Cinemática|Movimento Retilíneo Uniforme|Velocidade Média|
 
 3. O pacote extrai as questões dos arquivos pdf e as categoriza de acordo com os metadados dos arquivos .csv.
