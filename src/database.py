@@ -7,7 +7,6 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 import pandas as pd
-import pdfplumber
 
 from src.extrator import extract_questions_from_pdf
 from src.modelos import Questao
@@ -490,57 +489,50 @@ def limpar_para_latex(texto: str) -> str:
     if not texto:
         return ""
 
-    # 1. Caracteres Reservados (Exceto o $ que controlaremos manualmente)
+    # 1. Escapar caracteres reservados (Exceto o $ e \)
     for char in ["%", "_", "&", "#", "{", "}"]:
         texto = texto.replace(char, f"\\{char}")
 
-    # 2. PADRONIZAÇÃO INICIAL: Graus e Símbolos Gregos
-    # Fazemos isso antes das unidades para o Regex de unidade reconhecê-los
+    # 2. PADRONIZAÇÃO: Graus e Símbolos Gregos (Apenas os nomes internos)
+    # Note que não colocamos \unit aqui ainda, apenas o nome do comando
     texto = texto.replace("°C", r"\celsius")
     texto = texto.replace("°", r"\degree")
+
+    # Símbolos gregos (usando nomes que o siunitx ou textgreek entendem)
     gregas = {"μ": r"\textmu ", "π": r"\textpi ", "Δ": r"\textDelta ", "Ω": r"\ohm "}
     for k, v in gregas.items():
         texto = texto.replace(k, v)
 
-    # 3. NOTAÇÃO CIENTÍFICA COM UNIDADE (O "Tudo em um")
-    # Ex: 12x10^-6 °C^-1 -> \qty{12e-6}{\celsius^{-1}}
-    # O comando \qty do siunitx v3 combina número e unidade perfeitamente.
-    padrao_completo = (
-        r"(\d+[,.]?\d*)\s*[xX·*]\s*10\^?(-?\d+)\s*([a-zA-Z\\]+(?:\^?-?\d+)?)"
+    # 3. TRATAMENTO DE QUANTIDADES (Número + Unidade) -> \qty{valor}{unidade}
+    # O \qty é a forma correta e moderna de escrever 10 °C ou 12x10^-6 °C
+    # Ele já coloca o \unit internamente.
+    padrao_qty = (
+        r"(\d+[,.]?\d*(?:\s*[xX·*]\s*10\^?[-]?\d+)?)\s*([a-zA-Z\\]+(?:\^?-?\d+)?)"
     )
 
-    def tratar_completo(m):
-        val = m.group(1).replace(",", ".")
-        exp = m.group(2)
-        uni = m.group(3).replace("^", "^{") + "}" if "^" in m.group(3) else m.group(3)
-        return rf"\qty{{{val}e{exp}}}{{{uni}}}"
+    def substituir_qty(m):
+        valor_bruto = m.group(1).replace(",", ".")
+        # Limpa notação científica para o formato 'e' do siunitx
+        valor_limpo = re.sub(r"\s*[xX·*]\s*10\^?", "e", valor_bruto)
 
-    texto = re.sub(padrao_completo, tratar_completo, texto)
+        unidade = m.group(2)
+        # Se houver expoente na unidade, coloca chaves: ^-1 vira ^{-1}
+        if "^" in unidade:
+            unidade = unidade.replace("^", "^{") + "}"
 
-    # 4. NOTAÇÃO CIENTÍFICA PURA (Sem unidade colada)
-    # Ex: 3x10^8 -> \num{3e8}
-    texto = re.sub(r"(\d+[,.]?\d*)\s*[xX·*]\s*10\^?(-?\d+)", r"\\num{\1e\2}", texto)
-    texto = re.sub(r"\b10\^([-]?\d+)\b", r"\\num{1e\1}", texto)
+        return rf"\qty{{{valor_limpo}}}{{{unidade}}}"
 
-    # 5. UNIDADES SOLTAS (Sem notação científica)
-    # Ex: 10 m/s -> \unit{10.m/s}
-    padrao_unidade = r"(\d+[,.]?\d*)\s*([a-zA-Z\\]+(?:\^?-?\d+)?)"
+    texto = re.sub(padrao_qty, substituir_qty, texto)
 
-    def tratar_unidade(m):
-        # Evita processar o que já foi transformado em comando LaTeX
-        if "\\" in m.group(0):
-            return m.group(0)
-        val = m.group(1).replace(",", ".")
-        uni = m.group(2).replace("^", "^{") + "}" if "^" in m.group(2) else m.group(2)
-        return rf"\unit{{{val}.{uni}}}"
-
-    texto = re.sub(padrao_unidade, tratar_unidade, texto)
-
-    # 6. EXPOENTES MATEMÁTICOS RESTANTES (Ex: x^2)
-    # Só atua se NÃO houver uma barra invertida antes (para não estragar comandos LaTeX)
-    texto = re.sub(r"(?<!\\)([a-zA-Z])\^?(-?\d+)", r"$\1^{\2}$", texto)
+    # 4. CASO SOBRE \celsius ou \degree sozinhos (sem número antes)
+    # Se ainda houver algum comando de unidade solto no texto sem número
+    # Agora sim envolvemos no \unit{}
+    texto = texto.replace(r"\celsius", r"\unit{\celsius}")
+    texto = texto.replace(r"\degree", r"\unit{\degree}")
+    texto = texto.replace(r"\ohm", r"\unit{\ohm}")
 
     return texto
+
 
 def exportar_db_para_csv(db_path, csv_path):
     """
@@ -559,17 +551,17 @@ def exportar_db_para_csv(db_path, csv_path):
     """
     # 1. Conecta ao banco
     conn = sqlite3.connect(db_path)
-    
+
     # 2. Lê a tabela inteira para um DataFrame
     df = pd.read_sql_query("SELECT * FROM questoes", conn)
-    
+
     # 3. Remove a coluna 'texto' (se ela existir)
-    if 'texto' in df.columns:
-        df = df.drop(columns=['texto'])
-    
+    if "texto" in df.columns:
+        df = df.drop(columns=["texto"])
+
     # 4. Exporta para CSV
     # index=False evita que o Pandas crie uma coluna de números extras
-    df.to_csv(csv_path, index=False, encoding='utf-8-sig')
-    
+    df.to_csv(csv_path, index=False, encoding="utf-8-sig")
+
     conn.close()
     print(f"Exportação concluída: {csv_path}")
