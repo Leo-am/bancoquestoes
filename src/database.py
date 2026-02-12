@@ -473,63 +473,57 @@ def buscar_questao_por_id(nome_do_banco: str, questao_id: int) -> Optional[Dict]
 
 
 def limpar_para_latex(texto: str) -> str:
-    """
-    Limpa o texto para formatação em LaTeX.
-
-    Parameters:
-    -----------
-    texto : str
-        O texto a ser limpo.
-
-    Returns:
-    --------
-    str
-        O texto limpo e formatado para LaTeX.
-    """
     if not texto:
         return ""
 
-    # 1. Escapar caracteres reservados (Exceto o $ e \)
-    for char in ["%", "_", "&", "#", "{", "}"]:
-        texto = texto.replace(char, f"\\{char}")
-
-    # 2. PADRONIZAÇÃO: Graus e Símbolos Gregos (Apenas os nomes internos)
-    # Note que não colocamos \unit aqui ainda, apenas o nome do comando
+    # 1. PADRONIZAÇÃO INICIAL (Símbolos Gregos e Graus)
+    # Removido o \ohm daqui para tratar no dicionário de gregas
     texto = texto.replace("°C", r"\celsius")
     texto = texto.replace("°", r"\degree")
 
-    # Símbolos gregos (usando nomes que o siunitx ou textgreek entendem)
     gregas = {"μ": r"\textmu ", "π": r"\textpi ", "Δ": r"\textDelta ", "Ω": r"\ohm "}
     for k, v in gregas.items():
         texto = texto.replace(k, v)
 
-    # 3. TRATAMENTO DE QUANTIDADES (Número + Unidade) -> \qty{valor}{unidade}
-    # O \qty é a forma correta e moderna de escrever 10 °C ou 12x10^-6 °C
-    # Ele já coloca o \unit internamente.
+    # 2. TRATAMENTO DE QUANTIDADES (Incluindo o %)
+    # Adicionei '%' na lista de unidades capturadas pela Regex
     padrao_qty = (
-        r"(\d+[,.]?\d*(?:\s*[xX·*]\s*10\^?[-]?\d+)?)\s*([a-zA-Z\\]+(?:\^?-?\d+)?)"
+        r"(\d+[,.]?\d*(?:\s*[xX·*]\s*10\^?[-]?\d+)?)\s*([a-zA-Z\\%]+(?:\^?-?\d+)?)"
     )
 
     def substituir_qty(m):
         valor_bruto = m.group(1).replace(",", ".")
-        # Limpa notação científica para o formato 'e' do siunitx
         valor_limpo = re.sub(r"\s*[xX·*]\s*10\^?", "e", valor_bruto)
 
         unidade = m.group(2)
-        # Se houver expoente na unidade, coloca chaves: ^-1 vira ^{-1}
-        if "^" in unidade:
+        # Se a unidade for o símbolo %, trocamos pelo comando percent do siunitx
+        if unidade == "%":
+            unidade = r"\percent"
+
+        if "^" in unidade and "{" not in unidade:
             unidade = unidade.replace("^", "^{") + "}"
 
         return rf"\qty{{{valor_limpo}}}{{{unidade}}}"
 
     texto = re.sub(padrao_qty, substituir_qty, texto)
 
-    # 4. CASO SOBRE \celsius ou \degree sozinhos (sem número antes)
-    # Se ainda houver algum comando de unidade solto no texto sem número
-    # Agora sim envolvemos no \unit{}
-    texto = texto.replace(r"\celsius", r"\unit{\celsius}")
-    texto = texto.replace(r"\degree", r"\unit{\degree}")
-    texto = texto.replace(r"\ohm", r"\unit{\ohm}")
+    # 3. ESCAPAR CARACTERES RESERVADOS (Apenas o que sobrou fora do \qty)
+    # Usamos lookbehind (?<!\\) para não escapar o que já tem barra (ex: \celsius)
+    reservados = ["%", "_", "&", "#", "{", "}"]
+    for char in reservados:
+        # Escapa apenas se não houver uma barra invertida antes
+        texto = re.sub(rf"(?<!\\){re.escape(char)}", rf"\\{char}", texto)
+
+    # 4. CASOS SOLTOS (Unidades sem número)
+    unidades_soltas = {
+        r"\celsius": r"\unit{\celsius}",
+        r"\degree": r"\unit{\degree}",
+        r"\ohm": r"\unit{\ohm}",
+        r"\%": r"\unit{\percent}",  # Caso o % tenha sobrado isolado
+    }
+    for k, v in unidades_soltas.items():
+        if k in texto and v not in texto:  # Evita duplicar \unit{\unit{...}}
+            texto = texto.replace(k, v)
 
     return texto
 
