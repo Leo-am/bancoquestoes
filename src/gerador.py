@@ -5,7 +5,7 @@ import re
 import sqlite3
 from pathlib import Path
 
-from src.database import limpar_para_latex
+from src.limpeza import limpar_para_latex
 from src.modelos import Questao
 
 
@@ -161,12 +161,12 @@ def gerar_lista_exercicios_latex(
             # Se não encontrar alternativas, coloca o texto original
             conteudo_latex.append(texto_final)
 
-        def ajustar_caminho(match):
+        def ajustar_caminho(path_bruto):
             """Ajusta o caminho da imagem para o formato correto.
 
             Parameters:
             -----------
-            match : re.Match
+            path_bruto : re.Match
                 O objeto de correspondência da regex contendo o caminho da imagem.
 
             Returns:
@@ -174,31 +174,49 @@ def gerar_lista_exercicios_latex(
             str
                 O caminho ajustado da imagem no formato correto.
             """
-            caminho_original = q.imagem_path
+            # 1. Validação imediata: se for vazio, sai da função
+            if not path_bruto or str(path_bruto).lower() == "none":
+                return None
 
-            # Comportamento padrão: caminho local
-            novo_caminho = caminho_original
-
-            # Ajuste para Overleaf
             if overleaf:
-                origem_limpa = re.sub(r"[^\w\-]", "_", q.origem)
-                nome_arquivo = caminho_original.split("/")[-1]
-                novo_caminho = f"{origem_limpa}/{nome_arquivo}"
+                # Usamos str() para garantir que não quebre se origem for None
+                origem_limpa = re.sub(r"[^\w\-]", "_", str(q.origem or "Geral"))
 
-            return novo_caminho
+                # Fazemos o split no argumento que recebemos
+                nome_arquivo = str(path_bruto).split("/")[-1]
+                return f"{origem_limpa}/{nome_arquivo}"
 
-        imag_path = ajustar_caminho(overleaf)
+            return path_bruto
 
-        # 3.3. Adicionar Imagem (ajustada para largura da coluna)
-        if q.imagem_path and str(q.imagem_path).lower() != "none":
-            conteudo_latex.append(r"\begin{figure}[h!]")
-            conteudo_latex.append(r"    \centering")
-            # width=\linewidth garante que a imagem caiba na coluna
-            conteudo_latex.append(
-                rf"    \includegraphics[width=\linewidth]{{{imag_path}}}"
-            )
-            conteudo_latex.append(r"    \caption*{}")  # Caption sem número
-            conteudo_latex.append(r"\end{figure}")
+        imag_path = None
+
+        # 1. Verifica se existe um caminho e se ele NÃO é um booleano ou "None"
+        if q.imagem_path and str(q.imagem_path).lower() not in [
+            "none",
+            "true",
+            "false",
+            "1",
+        ]:
+
+            # 2. Só tenta ajustar o caminho se for uma string válida
+            # Isso evita que o 'True' vire 'OBFEP_2025/True'
+            imag_path = ajustar_caminho(q.imagem_path)
+
+            # 3. Verificação final: se o ajuste retornou algo que parece um arquivo
+            if isinstance(imag_path, str) and "." in imag_path:
+                conteudo_latex.append(r"\begin{figure}[h!]")
+                conteudo_latex.append(r"    \centering")
+                # width=\linewidth garante que a imagem caiba na coluna
+                conteudo_latex.append(
+                    rf"    \includegraphics[width=\linewidth]{{{imag_path}.png}}"
+                )
+                conteudo_latex.append(r"    \caption*{}")  # Caption sem número
+                conteudo_latex.append(r"\end{figure}")
+            else:
+                # Opcional: log para você saber qual questão está com dado sujo
+                print(
+                    f"⚠️ Aviso: Questão {q.id} ignorada por caminho de imagem inválido: {q.imagem_path}"
+                )
 
     conteudo_latex.append(r"\end{document}")
 
