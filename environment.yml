@@ -1,0 +1,16 @@
+name: questoes
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - fpdf
+  - pandas
+  - pdfplumber
+  - pypdf2
+  - reportlab
+  - sqlite==3.45.3
+  - jupyterlab
+  - fpdf2
+  - black
+  - isort
+  - pip
