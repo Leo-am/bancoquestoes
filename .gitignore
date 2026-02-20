@@ -175,3 +175,22 @@ outputs/
 # --- Sistema ---
 .DS_Store
 Thumbs.db
+notebooks/seu_banco.db
+.gitignore
+notebooks/Lista_Calorimetria.tex
+notebooks/questoes_completa.db
+data/processed/2025_OBFEP_B.csv
+data/processed/2023_OBFEP_B.csv
+data/processed/2021_OBFEP_B.csv
+data/processed/.DS_Store
+data/database/questoes_TESTE.db
+data/database/questoes_OBFEP
+data/.DS_Store
+data/processed/2025_OBFEP_B.csv
+data/database/questoes_TESTE.db
+data/processed/.DS_Store
+data/processed/2021_OBFEP_B.csv
+data/processed/2025_OBFEP_B.csv
+data/processed/2025_OBFEP_B.csv
+data/processed/2023_OBFEP_B.csv
+data/processed/2021_OBFEP_B.csv
