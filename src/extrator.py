@@ -13,7 +13,36 @@ import pdfplumber
 from PIL import Image
 
 
-def extract_questions_from_pdf(filename: str, base_char: str = "B") -> List[str]:
+def auditar_integridade_questao(texto: str) -> list:
+    """Detecta padrões que sugerem falha na extração (raízes, PUA, fórmulas)."""
+    alertas = []
+
+    # 1. Alerta de Raiz Quadrada (Símbolo isolado ou comando sem chaves)
+    if ("√" in texto or r"\sqrt" in texto) and "{" not in texto:
+        alertas.append("Raiz quadrada possivelmente mal formatada")
+
+    # 2. Alerta de Caracteres Fantasmas (PUA)
+    if re.search(r"[\uf000-\uf0ff]", texto):
+        alertas.append("Detectados caracteres não convertidos (PUA)")
+
+    # 3. Alerta de Fórmulas Fragmentadas (Ex: v 2 ou c 2)
+    # Procuramos um espaço, uma letra única, espaço(s) e um dígito.
+    # O \b garante que estamos pegando uma letra isolada.
+    if re.search(r"\b[a-zA-Z]\s+\^?\d", texto):
+        # Filtro extra: ignorar as letras 'e', 'a', 'o' que são comuns sozinhas em português
+        # apenas se não houver um circunflexo ^ indicando potência
+        match = re.search(r"\b([a-zA-Z])\s+\^?(\d)", texto)
+        if match and match.group(1).lower() not in ['a', 'e', 'o']:
+            alertas.append("Possível fragmentação em potências/fórmulas")
+
+    # 4. Alerta de Alternativas Incompletas
+    if "a)" in texto.lower() and "d)" not in texto.lower():
+        alertas.append("Múltipla escolha parece estar incompleta")
+
+    return alertas
+
+
+def extrair_questoes_pdf(filename: str, base_char: str = "B") -> List[str]:
     """
     Localiza o PDF em data/raw e extrai as questões usando Regex.
     Exemplo: base_char='B' busca por 'B.1)', 'B.2)', etc.
@@ -55,19 +84,29 @@ def extract_questions_from_pdf(filename: str, base_char: str = "B") -> List[str]
         # Regex: Letra + ponto(opcional) + número + parênteses
         # O padrão rf"{re.escape(base_char)}\.?\d+\)" é mais flexível
         pattern = rf"{re.escape(base_char)}\.?\d+\)"
-
         parts = re.split(pattern, document_text)
 
-        # Filtra strings vazias e remove espaços extras
-        questions_list = [q.strip() for q in parts[1:] if q.strip()]
+        # --- LÓGICA DE AUDITORIA ADAPTADA ---
+        raw_questions = [q.strip() for q in parts[1:] if q.strip()]
+        questions_list = []
 
-        print(f"✅ Sucesso! {len(questions_list)} questões extraídas de: {filename}")
+        print(f"\n🔍 Auditando {len(raw_questions)} questões de {filename}...")
+
+        for i, texto_questao in enumerate(raw_questions, 1):
+            avisos = auditar_integridade_questao(texto_questao)
+            label = f"{base_char}.{i})"
+
+            if avisos:
+                print(f"⚠️  {label}: {', '.join(avisos)}")
+                # Opcional: injeta um comentário LaTeX para facilitar o Ctrl+F depois
+                texto_questao = f"%% [REVISAR: {'; '.join(avisos)}]\n" + texto_questao
+
+            questions_list.append(texto_questao)
+
+        print(f"✅ Sucesso! Questões extraídas e auditadas.\n")
         return questions_list
 
-    except (FileNotFoundError, PermissionError) as e:
-        print(f"❌ Erro de arquivo: {e}")
-        return []
-    except Exception as e:  # pylint: disable=broad-exception-caught
+    except Exception as e:
         print(f"❌ Erro inesperado na extração: {e}")
         return []
 
@@ -178,32 +217,27 @@ def limpar_texto_extracao(texto: str) -> str:
     for original, substituto in substituicoes_basicas.items():
         texto = texto.replace(original, substituto)
 
-    # 1. Normalização Universal de Traços e Sinais
-    # Captura todos os tipos de traços (en-dash, em-dash, minus sign unicode)
-    # e converte para o hífen padrão (-) que o Python/LaTeX entendem.
-    padrao_tracos = r"[–—−‐⁃]"
-    texto = re.sub(padrao_tracos, "-", texto)
+    # --- TRECHO CORRIGIDO ---
+    # 1. Normalização de traços (Mantém o hífen padrão)
+    texto = re.sub(r"[–—−‐⁃]", "-", texto)
 
-    # 2. Correção Geral de Expoentes Negativos (Unidades e Notação)
-    # Busca uma letra ou símbolo (como C ou m) seguido de um sinal de menos e um número
-    # Ex: °C-1 -> °C^-1 | s-1 -> s^-1 | 10-6 -> 10^-6
-    # O pattern: (\w|°|%)-(\d+)
-    # (Letra ou símbolo) seguido de (-) seguido de (dígitos)
-    texto = re.sub(r"(\w|°|%)-(\d+)", r"\1^\2", texto)
+    # 2. Correção de Expoentes (Apenas para LETRAS ou símbolos, NUNCA números)
+    # Trocamos \w por [a-zA-Z°%]. Isso impede que o '0' de '10' dispare a regra.
+    texto = re.sub(r"([a-zA-Z°%])-(\d+)", r"\1^-\2", texto)
 
-    # 3. Proteção para Notação Científica "Quebrada"
-    # Se o PDF extraiu "10 -6" ou "10- 6", remove os espaços e garante o ^
-    texto = re.sub(r"10\s*\^?\s*-?\s*(\d+)", r"10^-\1", texto)
-
-    # 4. Limpeza de espaços duplos que surgem após as substituições
-    texto = re.sub(r"\s+", " ", texto)
+    # 3. Notação Científica rigorosa
+    # Caso A: Se houver sinal de menos explícito (ex: 10-6 ou 10^-6)
+    texto = re.sub(r"10\s*\^?\s*-\s*(\d+)", r"10^-\1", texto)
+    
+    # Caso B: Se houver espaço (ex: 10 6)
+    texto = re.sub(r"10\s+(\d+)\b", r"10^\1", texto)
 
     return texto.strip()
 
 
 if __name__ == "__main__":
     # Teste rápido se rodar este arquivo diretamente
-    res = extract_questions_from_pdf("prova_exemplo.pdf", "B")
+    res = extrair_questoes_pdf("prova_exemplo.pdf", "B")
     if res:
         print(f"Primeira questão: {res[0][:50]}...")
 
