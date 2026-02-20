@@ -1,29 +1,44 @@
-name: Pylint
+name: CI - Testes e Qualidade
 
-on: [push]
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
 
 jobs:
   build:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.8", "3.9", "3.10"]
+        # Recomendo focar na 3.10+ para agilizar, a menos que precise de retrocompatibilidade
+        python-version: ["3.10"]
+
     steps:
     - uses: actions/checkout@v4
+
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v3
+      uses: actions/setup-python@v5
       with:
         python-version: ${{ matrix.python-version }}
+
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install pylint "black[jupyter]"
+        pip install pylint pytest "black[jupyter]"
         if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-    - name: Check formatting with Black
+
+    - name: Check formatting (Black)
+      run: black . --check
+      continue-on-error: true # Não trava o build por causa de espaços/aspas
+
+    - name: Analysing the code (Pylint)
       run: |
-        black . --check  # Verifica se o código está formatado
-      continue-on-error: true
-    - name: Analysing the code with pylint
-      run: |
-        # O Pylint retornará 0 (sucesso) se a nota for igual ou maior que 8.0
+        # Resolve o erro de import E0401
+        export PYTHONPATH=$PYTHONPATH:.
         pylint $(git ls-files '*.py') --fail-under=8.0
+
+    - name: Run Tests (Pytest)
+      run: |
+        export PYTHONPATH=$PYTHONPATH:.
+        pytest
