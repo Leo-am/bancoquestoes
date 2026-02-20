@@ -32,7 +32,7 @@ def auditar_integridade_questao(texto: str) -> list:
         # Filtro extra: ignorar as letras 'e', 'a', 'o' que são comuns sozinhas em português
         # apenas se não houver um circunflexo ^ indicando potência
         match = re.search(r"\b([a-zA-Z])\s+\^?(\d)", texto)
-        if match and match.group(1).lower() not in ['a', 'e', 'o']:
+        if match and match.group(1).lower() not in ["a", "e", "o"]:
             alertas.append("Possível fragmentação em potências/fórmulas")
 
     # 4. Alerta de Alternativas Incompletas
@@ -228,7 +228,7 @@ def limpar_texto_extracao(texto: str) -> str:
     # 3. Notação Científica rigorosa
     # Caso A: Se houver sinal de menos explícito (ex: 10-6 ou 10^-6)
     texto = re.sub(r"10\s*\^?\s*-\s*(\d+)", r"10^-\1", texto)
-    
+
     # Caso B: Se houver espaço (ex: 10 6)
     texto = re.sub(r"10\s+(\d+)\b", r"10^\1", texto)
 

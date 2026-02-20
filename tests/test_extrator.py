@@ -14,6 +14,7 @@ def caminho_pdf(tmp_path):
     """Cria um caminho temporário para o PDF de teste que o pytest gerencia."""
     return tmp_path / "pdf_de_teste.pdf"
 
+
 def test_criar_pdf_teste(caminho_pdf):
     c = canvas.Canvas(str(caminho_pdf))
 
@@ -109,10 +110,9 @@ def test_extract_questions_empty_content():
             assert len(resultado) == 0
 
 
-
 def test_auditoria_identifica_problemas_comuns():
     """Testa se a função de auditoria detecta os gatilhos de erro."""
-    
+
     # Caso 1: Raiz quadrada sem chaves (padrão de erro de extração)
     texto_raiz = "Calcule o valor de \sqrt 1-v^2/c^2 ."
     alertas_raiz = auditar_integridade_questao(texto_raiz)
@@ -128,6 +128,7 @@ def test_auditoria_identifica_problemas_comuns():
     alertas_frag = auditar_integridade_questao(texto_frag)
     assert any("fragmentação" in a for a in alertas_frag)
 
+
 def test_extrair_questoes_com_avisos(tmp_path, monkeypatch):
     """
     Testa a integração da auditoria dentro da função de extração.
@@ -139,12 +140,18 @@ def test_extrair_questoes_com_avisos(tmp_path, monkeypatch):
 
     # 1. Mock do pdfplumber (para não abrir um arquivo real)
     class MockPage:
-        def extract_text(self): return texto_simulado
+        def extract_text(self):
+            return texto_simulado
 
     class MockPDF:
-        def __init__(self, *args, **kwargs): self.pages = [MockPage()]
-        def __enter__(self): return self
-        def __exit__(self, *args): pass
+        def __init__(self, *args, **kwargs):
+            self.pages = [MockPage()]
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            pass
 
     monkeypatch.setattr(pdfplumber, "open", lambda x: MockPDF())
 
@@ -152,7 +159,6 @@ def test_extrair_questoes_com_avisos(tmp_path, monkeypatch):
     # Isso faz com que a função acredite que o fake.pdf existe
 
     monkeypatch.setattr(Path, "exists", lambda x: True)
-
 
     # Executa a extração
     questoes = extrair_questoes_pdf("fake.pdf", base_char="B")
@@ -162,21 +168,25 @@ def test_extrair_questoes_com_avisos(tmp_path, monkeypatch):
     assert "%% [REVISAR:" in questoes[1]
     assert "Raiz quadrada" in questoes[1]
 
+
 def test_multiplos_de_dez():
     # Cenário: O texto da questão contém múltiplos de 10 e números grandes
-    corpo_questao_original = "O prêmio de 100000 reais foi dividido em 10 parcelas de 10000."
+    corpo_questao_original = (
+        "O prêmio de 100000 reais foi dividido em 10 parcelas de 10000."
+    )
     texto_pdf_completo = f"B.1) {corpo_questao_original}"
-    
+
     mock_page = MagicMock()
     mock_page.extract_text.return_value = texto_pdf_completo
     mock_pdf = MagicMock()
     mock_pdf.pages = [mock_page]
-    
-    with patch("pdfplumber.open") as mock_open, \
-         patch.object(Path, "exists", return_value=True):
-        
+
+    with patch("pdfplumber.open") as mock_open, patch.object(
+        Path, "exists", return_value=True
+    ):
+
         mock_open.return_value.__enter__.return_value = mock_pdf
-        
+
         # Executa a extração
         questoes = extrair_questoes_pdf("teste_numeros.pdf", base_char="B")
 
@@ -187,4 +197,3 @@ def test_multiplos_de_dez():
     assert "10" in questoes[0]
     assert "10000" in questoes[0]
     assert questoes[0] == corpo_questao_original
-
