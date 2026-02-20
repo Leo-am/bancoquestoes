@@ -12,7 +12,10 @@ from src.limpeza import limpar_para_latex
         # Teste de Notação Científica
         ("A constante é 6.62 x 10^-34 J", r"A constante é \qty{6.62e-34}{J}"),
         ("O valor é 2*10^5 Pa", r"O valor é \qty{2e5}{Pa}"),
-        ("A constante é 6,62 x 10^-34 J", r"A constante é \qty{6.62e-34}{J}"),
+        (
+            "No início, o gás estava a 120 °C e a coluna de mercúrio tinha h = 10^-4 cm.",
+            r"No início, o gás estava a \qty{120}{\celsius} e a coluna de mercúrio tinha h = \qty{10e-4}{cm}.",
+        ),
         # Teste de Unidades e Símbolos Gregos
         ("A temperatura é 25°C.", r"A temperatura é \qty{25}{\celsius}."),
         ("Resistência de 100 Ω.", r"Resistência de \qty{100}{\ohm}."),

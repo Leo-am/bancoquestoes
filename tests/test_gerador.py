@@ -1,9 +1,11 @@
+import io
 import re
 from pathlib import Path
 from unittest.mock import MagicMock
 
 import pytest
 
+import src.gerador as gerador_mod
 from src.gerador import gerar_lista_exercicios_latex
 
 
@@ -135,3 +137,50 @@ def test_gerador_latex_ignora_valor_booleano_sujo(tmp_path, monkeypatch):
     assert (
         "Questão teste com erro de caminho" in conteudo
     ), "O texto da questão deve estar presente!"
+
+
+# Criamos uma classe que sobrecarrega o close para não apagar os dados
+class PersistentStringIO(io.StringIO):
+    def close(self):
+        # Não fazemos nada no close para podermos ler o buffer depois
+        pass
+
+
+def test_unidade_aceleracao_no_latex_gerado(monkeypatch):
+    """
+    Testa a formatação de unidades interceptando a escrita e impedindo o fechamento prematuro.
+    """
+    # 1. Dados de Teste
+    texto_entrada = "Aceleração de 10 m/s^2."
+    questao_mock = MockQuestao(id=1, texto=texto_entrada)
+
+    # 2. Mocks
+    monkeypatch.setattr(
+        gerador_mod, "buscar_questoes_por_tema", lambda b, t: [questao_mock]
+    )
+    monkeypatch.setattr("src.gerador.Path.mkdir", lambda *args, **kwargs: None)
+
+    # Criamos o nosso buffer persistente
+    fake_file = PersistentStringIO()
+
+    # Mock do open para retornar nosso buffer
+    monkeypatch.setattr("builtins.open", lambda name, mode, encoding=None: fake_file)
+
+    # 3. Execução
+    # Passamos argumentos fictícios, pois o banco e o tema estão mockados
+    gerar_lista_exercicios_latex("fake_db", "Física", "lista_teste")
+
+    # 4. Verificação
+    conteudo_gerado = fake_file.getvalue()
+
+    # Verificamos se a unidade está lá, aceitando com ou sem chaves no expoente
+    assert "m/s" in conteudo_gerado
+    assert "2" in conteudo_gerado
+
+    # O assert principal que garante a proteção do siunitx
+    assert (
+        r"\qty{10}{m/s^{2}}" in conteudo_gerado or r"\qty{10}{m/s^2}" in conteudo_gerado
+    )
+
+    # Fechamos manualmente agora que o teste acabou
+    super(PersistentStringIO, fake_file).close()

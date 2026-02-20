@@ -1,12 +1,18 @@
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
+import pdfplumber
 import pytest
 from reportlab.lib.units import cm
 from reportlab.pdfgen import canvas
 
-from src.extrator import extract_questions_from_pdf
+from src.extrator import auditar_integridade_questao, extrair_questoes_pdf
 
+
+@pytest.fixture
+def caminho_pdf(tmp_path):
+    """Cria um caminho temporário para o PDF de teste que o pytest gerencia."""
+    return tmp_path / "pdf_de_teste.pdf"
 
 def test_criar_pdf_teste(caminho_pdf):
     c = canvas.Canvas(str(caminho_pdf))
@@ -45,7 +51,7 @@ def test_criar_pdf_teste(caminho_pdf):
     c.drawString(100, 650, "B.4) Observe o gráfico abaixo:")
     c.setDash(1, 2)  # Linha pontilhada
     c.line(100, 580, 200, 630)  # Simula um vetor ou linha de gráfico
-    c.setDash(0)
+    c.setDash([])
     c.rect(100, 550, 50, 50)  # Simula um bloco num plano inclinado
 
     # --- Questão 5: Frações e Unidades Compostas ---
@@ -72,7 +78,7 @@ def test_extract_questions_regex_logic():
 
         # Mockamos também a existência do arquivo para passar no check pdf_path.exists()
         with patch.object(Path, "exists", return_value=True):
-            resultado = extract_questions_from_pdf("fake.pdf", base_char="B")
+            resultado = extrair_questoes_pdf("fake.pdf", base_char="B")
 
             assert len(resultado) == 2
             assert "Primeira questão aqui" in resultado[0]
@@ -84,7 +90,7 @@ def test_extract_questions_file_not_found():
     """Verifica se a função lida corretamente com arquivos inexistentes."""
     # Garante que Path.exists retorna False
     with patch.object(Path, "exists", return_value=False):
-        resultado = extract_questions_from_pdf("arquivo_fantasma.pdf")
+        resultado = extrair_questoes_pdf("arquivo_fantasma.pdf")
         assert resultado == []
 
 
@@ -99,5 +105,86 @@ def test_extract_questions_empty_content():
         mock_pdf.return_value.__enter__.return_value.pages = [mock_page]
 
         with patch.object(Path, "exists", return_value=True):
-            resultado = extract_questions_from_pdf("vazio.pdf", base_char="B")
+            resultado = extrair_questoes_pdf("vazio.pdf", base_char="B")
             assert len(resultado) == 0
+
+
+
+def test_auditoria_identifica_problemas_comuns():
+    """Testa se a função de auditoria detecta os gatilhos de erro."""
+    
+    # Caso 1: Raiz quadrada sem chaves (padrão de erro de extração)
+    texto_raiz = "Calcule o valor de \sqrt 1-v^2/c^2 ."
+    alertas_raiz = auditar_integridade_questao(texto_raiz)
+    assert any("Raiz quadrada" in a for a in alertas_raiz)
+
+    # Caso 2: Caractere PUA (Fantasma do PDF)
+    texto_pua = "O valor de \uf06d é 10."
+    alertas_pua = auditar_integridade_questao(texto_pua)
+    assert any("PUA" in a for a in alertas_pua)
+
+    # Caso 3: Fragmentação de fórmula (v seguido de espaço e potência)
+    texto_frag = "Sabendo que v  ^2 = 25 m/s."
+    alertas_frag = auditar_integridade_questao(texto_frag)
+    assert any("fragmentação" in a for a in alertas_frag)
+
+def test_extrair_questoes_com_avisos(tmp_path, monkeypatch):
+    """
+    Testa a integração da auditoria dentro da função de extração.
+    """
+    texto_simulado = (
+        "B.1) Questão perfeita.\n"
+        "B.2) Questão com erro de raiz √ 25 e caractere \uf06d."
+    )
+
+    # 1. Mock do pdfplumber (para não abrir um arquivo real)
+    class MockPage:
+        def extract_text(self): return texto_simulado
+
+    class MockPDF:
+        def __init__(self, *args, **kwargs): self.pages = [MockPage()]
+        def __enter__(self): return self
+        def __exit__(self, *args): pass
+
+    monkeypatch.setattr(pdfplumber, "open", lambda x: MockPDF())
+
+    # 2. CORREÇÃO: Mock do Path.exists
+    # Isso faz com que a função acredite que o fake.pdf existe
+
+    monkeypatch.setattr(Path, "exists", lambda x: True)
+
+
+    # Executa a extração
+    questoes = extrair_questoes_pdf("fake.pdf", base_char="B")
+
+    # Agora o assert deve passar
+    assert len(questoes) == 2
+    assert "%% [REVISAR:" in questoes[1]
+    assert "Raiz quadrada" in questoes[1]
+
+def test_multiplos_de_dez():
+    # Cenário: O texto da questão contém múltiplos de 10 e números grandes
+    corpo_questao_original = "O prêmio de 100000 reais foi dividido em 10 parcelas de 10000."
+    texto_pdf_completo = f"B.1) {corpo_questao_original}"
+    
+    mock_page = MagicMock()
+    mock_page.extract_text.return_value = texto_pdf_completo
+    mock_pdf = MagicMock()
+    mock_pdf.pages = [mock_page]
+    
+    with patch("pdfplumber.open") as mock_open, \
+         patch.object(Path, "exists", return_value=True):
+        
+        mock_open.return_value.__enter__.return_value = mock_pdf
+        
+        # Executa a extração
+        questoes = extrair_questoes_pdf("teste_numeros.pdf", base_char="B")
+
+    # Verificações
+    assert len(questoes) == 1
+    # Verifica se os múltiplos de 10 no corpo foram preservados exatamente
+    assert "100000" in questoes[0]
+    assert "10" in questoes[0]
+    assert "10000" in questoes[0]
+    assert questoes[0] == corpo_questao_original
+
