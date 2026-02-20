@@ -87,3 +87,33 @@ def buscar_questao_por_id(id_questao: int, nome_do_banco: str):
     except Exception as e:
         print(f"❌ Erro ao buscar questão: {e}")
         return None
+
+
+def buscar_questao_por_texto(nome_do_banco: str, trecho: str):
+    """
+    Busca todas as questões que contenham o trecho informado.
+    """
+    # Localiza o banco na raiz do projeto (ajuste conforme sua estrutura)
+    caminho_banco = Path(__file__).resolve().parent.parent / f"{nome_do_banco}.db"
+
+    if not caminho_banco.exists():
+        print(f"❌ Erro: Banco de dados {caminho_banco} não encontrado.")
+        return []
+
+    try:
+        conn = sqlite3.connect(str(caminho_banco))
+        cursor = conn.cursor()
+
+        # O uso de ? evita SQL Injection.
+        # O trecho entre % permite a busca parcial.
+        query = "SELECT id, texto, origem, temas FROM questoes WHERE texto LIKE ?"
+        cursor.execute(query, (f"%{trecho}%",))
+
+        resultados = cursor.fetchall()
+        conn.close()
+
+        return resultados
+
+    except sqlite3.Error as e:
+        print(f"❌ Erro no SQLite: {e}")
+        return []
