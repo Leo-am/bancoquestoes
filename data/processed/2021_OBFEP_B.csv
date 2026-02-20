@@ -1,21 +1,21 @@
 numero_questao,serie,origem,dificuldade,imagem,tema1,tema2,tema3
-1,Primeiro Ano,OBFEP 2021,7,Figuras/2021/B.1,Cinemática,Movimento Circular Uniforme,Unidades de Medida
-2,Primeiro Ano,OBFEP 2021,7,None,Cinemática,Conceitual,Origem do Movimento
-3,Primeiro Ano,OBFEP 2021,7,Figuras/2021/B.3,Leis de Newton,Plano Inclinado,Decomposição de Forças
-4,Primeiro Ano,OBFEP 2021,7,None,Cinemática,Queda Livre,Conceitual
-5,Primeiro Ano,OBFEP 2021,7,Figuras/2021/B.5,Força Centrípeta,Movimento Circular Uniforme,Conceitual
-6,Primeiro Ano,OBFEP 2021,7,Figuras/2021/B.6,Leis de Newton,Empuxo,Hidrostática
-7,Primeiro Ano,OBFEP 2021,7,Figuras/2021/B.7,Cinemática,Movimento em Duas Dimensões,Queda Livre
-8,Primeiro Ano,OBFEP 2021,7,Figuras/2021/B.8,Leis de Conservação,Momento Linear,Colisões
-9,Primeiro Ano,OBFEP 2021,7,Figuras/2021/B.9,Leis de Newton,Aplicações das Leis de Newton,Máquina de Atwood
-10,Primeiro Ano,OBFEP 2021,7,None,Gravitação Universal,Leis de Newton,Força Centrípeta
-11,Segundo Ano,OBFEP 2021,7,Figuras/2021/B.11,Hidrostática,Pressão Hidrostática,Densidade
-12,Segundo Ano,OBFEP 2021,7,Figuras/2021/B.12,Hidrostática,Pressão Hidrostática,Conceitual
-13,Segundo Ano,OBFEP 2021,7,None,Calorimetria,Calor Latente,Transições de Fase
-14,Segundo Ano,OBFEP 2021,7,None,Calorimetria,Conceitual,Teoria Cinética dos Gases
-15,Segundo Ano,OBFEP 2021,7,None,Conservação de Energia Mecânica,Calorimetria,Calor Latente
-16,Segundo Ano,OBFEP 2021,7,Figuras/2021/B.16,Gases Ideais,Transformações Gasosas,Termometria
-17,Segundo Ano,OBFEP 2021,7,None,Óptica Geométrica,Visão Humana,Conceitual
-18,Segundo Ano,OBFEP 2021,7,Figuras/2021/B.18,Óptica Geométrica,Espelhos,Reflexão
-19,Segundo Ano,OBFEP 2021,7,Figuras/2021/B.19,Óptica Geométrica,Lentes,Condições de Gauss
-20,Segundo Ano,OBFEP 2021,7,Figuras/2021/B.20,Óptica Geométrica,Refração,Conceitual
+1,Primeiro Ano,OBFEP_2021,7,../data/figuras/OBFEP_2021/B.1,Cinemática,Movimento Circular Uniforme,Unidades de Medida
+2,Primeiro Ano,OBFEP_2021,7,None,Cinemática,Conceitual,Origem do Movimento
+3,Primeiro Ano,OBFEP_2021,7,../data/figurasOBFEP_2021/B.3,Leis de Newton,Plano Inclinado,Decomposição de Forças
+4,Primeiro Ano,OBFEP_2021,7,None,Cinemática,Queda Livre,Conceitual
+5,Primeiro Ano,OBFEP_2021,7,../data/figuras/OBFEP_2021/B.5,Força Centrípeta,Movimento Circular Uniforme,Conceitual
+6,Primeiro Ano,OBFEP_2021,7,../data/figuras/OBFEP_2021/B.6,Leis de Newton,Empuxo,Hidrostática
+7,Primeiro Ano,OBFEP_2021,7,../data/figuras/OBFEP_2021/B.7,Cinemática,Movimento em Duas Dimensões,Queda Livre
+8,Primeiro Ano,OBFEP_2021,7,../data/figuras/OBFEP_2021/B.8,Leis de Conservação,Momento Linear,Colisões
+9,Primeiro Ano,OBFEP_2021,7,../data/figuras/OBFEP_2021/B.9,Leis de Newton,Aplicações das Leis de Newton,Máquina de Atwood
+10,Primeiro Ano,OBFEP_2021,7,None,Gravitação Universal,Leis de Newton,Força Centrípeta
+11,Segundo Ano,OBFEP_2021,7,../data/figuras/OBFEP_2021/B.11,Hidrostática,Pressão Hidrostática,Densidade
+12,Segundo Ano,OBFEP_2021,7,../data/figuras/OBFEP_2021/B.12,Hidrostática,Pressão Hidrostática,Conceitual
+13,Segundo Ano,OBFEP_2021,7,None,Calorimetria,Calor Latente,Transições de Fase
+14,Segundo Ano,OBFEP_2021,7,None,Calorimetria,Conceitual,Teoria Cinética dos Gases
+15,Segundo Ano,OBFEP_2021,7,None,Conservação de Energia Mecânica,Calorimetria,Calor Latente
+16,Segundo Ano,OBFEP_2021,7,../data/figuras/OBFEP_2021/B.16,Gases Ideais,Transformações Gasosas,Termometria
+17,Segundo Ano,OBFEP_2021,7,None,Óptica Geométrica,Visão Humana,Conceitual
+18,Segundo Ano,OBFEP_2021,7,../data/figuras/OBFEP_2021/B.18,Óptica Geométrica,Espelhos,Reflexão
+19,Segundo Ano,OBFEP_2021,7,../data/figuras/OBFEP_2021/B.19,Óptica Geométrica,Lentes,Condições de Gauss
+20,Segundo Ano,OBFEP_2021,7,../data/figuras/OBFEP_2021/B.20,Óptica Geométrica,Refração,Conceitual

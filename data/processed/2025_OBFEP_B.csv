@@ -1,21 +1,21 @@
 numero_questao,serie,origem,dificuldade,imagem,tema1,tema2,tema3
-1,Primeiro Ano,OBFEP 2025,7,None,Gravitação Universal,Força Centrípeta,Leis de Newton
-2,Primeiro Ano,OBFEP 2025,7,B.2,Força Centrípeta,Movimento Circular Uniforme,
-3,Primeiro Ano,OBFEP 2025,7,B.3,Cinemática,Velocidade Média,Unidades de Medida
-4,Segundo Ano,OBFEP 2025,7,B.4,Óptica Geométrica,Instrumentos Ópticos,Visão Humana
-5,Segundo Ano,OBFEP 2025,7,B.5,Termometria,Dilatação,Escalas Termométricas
-6,Segundo Ano,OBFEP 2025,7,B.6,Transformações Gasosas,Calorimetria,Lei dos Gases Ideais
-7,Segundo Ano,OBFEP 2025,7,None,Leis da Termodinâmica,Ciclo de Carnot,Máquinas Térmicas
-8,Segundo Ano,OBFEP 2025,7,B.8,Óptica Geométrica,Conceitual,Introdução à Óptica
-9,Segundo Ano,OBFEP 2025,7,B.9,Termometria,Dilatação,
-10,Primeiro Ano,OBFEP 2025,7,B.10,Estática,Equilíbrio de Corpos Rígidos,Torque
-11,Segundo Ano,OBFEP 2025,7,B.11,Óptica Geométrica,Condições de Gauss,Espelhos
-12,Segundo Ano,OBFEP 2025,7,None,Hidrostática,Empuxo,Primeira Lei de Newton
-13,Segundo Ano,OBFEP 2025,7,B.13,Óptica Geométrica,Lentes,Instrumentos Ópticos
-14,Segundo Ano,OBFEP 2025,7,B.14,Calorimetria,Potência,Calor Sensível
-15,Segundo Ano,OBFEP 2025,7,B.15,Calorimetria,Calor Sensível,Gases Ideais
-16,Primeiro Ano,OBFEP 2025,7,None,Leis de Conservação,Momento Linear,Conservação de Energia Mecânica
-17,Primeiro Ano,OBFEP 2025,7,B.17,Cinemática,Movimento em Duas Dimensões,Lançamento Oblíquo
-18,Primeiro Ano,OBFEP 2025,7,None,Leis de Conservação,Impulso,Momento Linear
-19,Segundo Ano,OBFEP 2025,7,B.19,Hidrostática,Pressão Hidrostática,Pressão
-20,Segundo Ano,OBFEP 2025,7,B.20,Calorimetria,Mecanismos de Transferência de Calor,Condução Térmica
+1,Primeiro Ano,OBFEP_2025,7,None,Gravitação Universal,Força Centrípeta,Leis de Newton
+2,Primeiro Ano,OBFEP_2025,7,../data/figuras/OBFEP_2025/B.2,Força Centrípeta,Movimento Circular Uniforme,
+3,Primeiro Ano,OBFEP_2025,7,../data/figuras/OBFEP_2025/B.3,Cinemática,Velocidade Média,Unidades de Medida
+4,Segundo Ano,OBFEP_2025,7,../data/figuras/OBFEP_2025/B.4,Óptica Geométrica,Instrumentos Ópticos,Visão Humana
+5,Segundo Ano,OBFEP_2025,7,../data/figuras/OBFEP_2025/B.5,Termometria,Dilatação,Escalas Termométricas
+6,Segundo Ano,OBFEP_2025,7,../data/figuras/OBFEP_2025/B.6,Transformações Gasosas,Calorimetria,Lei dos Gases Ideais
+7,Segundo Ano,OBFEP_2025,7,None,Leis da Termodinâmica,Ciclo de Carnot,Máquinas Térmicas
+8,Segundo Ano,OBFEP_2025,7,../data/figuras/OBFEP_2025/B.8,Óptica Geométrica,Conceitual,Introdução à Óptica
+9,Segundo Ano,OBFEP_2025,7,../data/figuras/OBFEP_2025/B.9,Termometria,Dilatação,
+10,Primeiro Ano,OBFEP_2025,7,../data/figuras/OBFEP_2025/B.10,Estática,Equilíbrio de Corpos Rígidos,Torque
+11,Segundo Ano,OBFEP_2025,7,../data/figuras/OBFEP_2025/B.11,Óptica Geométrica,Condições de Gauss,Espelhos
+12,Segundo Ano,OBFEP_2025,7,None,Hidrostática,Empuxo,Primeira Lei de Newton
+13,Segundo Ano,OBFEP_2025,7,../data/figuras/OBFEP_2025/B.13,Óptica Geométrica,Lentes,Instrumentos Ópticos
+14,Segundo Ano,OBFEP_2025,7,../data/figuras/OBFEP_2025/B.14,Calorimetria,Potência,Calor Sensível
+15,Segundo Ano,OBFEP_2025,7,../data/figuras/OBFEP_2025/B.15,Calorimetria,Calor Sensível,Gases Ideais
+16,Primeiro Ano,OBFEP_2025,7,None,Leis de Conservação,Momento Linear,Conservação de Energia Mecânica
+17,Primeiro Ano,OBFEP_2025,7,../data/figuras/OBFEP_2025/B.17,Cinemática,Movimento em Duas Dimensões,Lançamento Oblíquo
+18,Primeiro Ano,OBFEP_2025,7,None,Leis de Conservação,Impulso,Momento Linear
+19,Segundo Ano,OBFEP_2025,7,../data/figuras/OBFEP_2025/B.19,Hidrostática,Pressão Hidrostática,Pressão
+20,Segundo Ano,OBFEP_2025,7,../data/figuras/OBFEP_2025/B.20,Calorimetria,Mecanismos de Transferência de Calor,Condução Térmica
