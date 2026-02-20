@@ -1,5 +1,5 @@
 # --- Extração de Dados e OCR de PDFs ---
-fitz                 # Nome de importação do PyMuPDF (extração rápida de imagens e texto)
+PyMuPDF                 # Nome de importação do PyMuPDF (extração rápida de imagens e texto)
 pdfplumber           # Excelente para extrair tabelas e texto com precisão geométrica
 
 # --- Manipulação de Dados e Imagens ---
