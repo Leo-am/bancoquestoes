@@ -194,3 +194,7 @@ data/processed/2025_OBFEP_B.csv
 data/processed/2025_OBFEP_B.csv
 data/processed/2023_OBFEP_B.csv
 data/processed/2021_OBFEP_B.csv
+*.csv
+/data
+*.db
+/data
